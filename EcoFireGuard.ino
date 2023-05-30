@@ -5,20 +5,22 @@
 #define SPRINKLER3 4
 #define SPRINKLER4 5
 
+#define MOTOR1 6
+#define MOTOR2 7
+
 #define LED1 9
 #define LED2 10
 #define LED3 11
 #define LED4 12
-#define MOTOR 13
 
-LiquidCrystal_I2C lcd1(0x24, 16, 2);
-LiquidCrystal_I2C lcd2(0x25, 16, 2);
-LiquidCrystal_I2C lcd3(0x26, 16, 2);
-LiquidCrystal_I2C lcd4(0x27, 16, 2);
+LiquidCrystal_I2C lcd1(0x27, 16, 2);
+LiquidCrystal_I2C lcd2(0x26, 16, 2);
+LiquidCrystal_I2C lcd3(0x25, 16, 2);
+LiquidCrystal_I2C lcd4(0x24, 16, 2);
 
 bool sprinklerOn[] = { false, false, false, false };
 bool ledOn[] = { false, false, false, false };
-bool motorOn = false;
+bool motorOn[] = { false, false };
 
 struct serialInput {
   String key;
@@ -43,7 +45,8 @@ void setup() {
   pinMode(LED3, OUTPUT);
   pinMode(LED4, OUTPUT);
 
-  pinMode(MOTOR, OUTPUT);
+  pinMode(MOTOR1, OUTPUT);
+  pinMode(MOTOR2, OUTPUT);
 
   // 화면 초기화
   lcd1.init();
@@ -106,8 +109,11 @@ void loop() {
   else digitalWrite(LED4, LOW);
 
   //////// DC MOTOR ////////
-  if (motorOn && !ecoMode) digitalWrite(MOTOR, HIGH);
-  else digitalWrite(MOTOR, LOW);
+  if (motorOn[0] && !ecoMode) digitalWrite(MOTOR1, HIGH);
+  else digitalWrite(MOTOR1, LOW);
+
+  if (motorOn[1] && !ecoMode) digitalWrite(MOTOR1, HIGH);
+  else digitalWrite(MOTOR1, LOW);
 
   if (Serial.available()) {
     serInput.key = Serial.readStringUntil(':');
@@ -159,7 +165,7 @@ void loop() {
           ledOn[serInput.value[0] - '0'] = serInput.value[1] == '1';
           break;
         case 'M':
-          motorOn = serInput.value[1] == '1';
+          motorOn[serInput.value[0] - '0'] = serInput.value[1] == '1';
           break;
       }
     }
