@@ -52,6 +52,8 @@ def detect(index, changed_index):
             results = model.predict(frame, half=True, device='cpu')
             result_frame = frame
 
+            person_count = 0
+
             for result in results:
                 boxes = result.boxes
 
@@ -59,8 +61,14 @@ def detect(index, changed_index):
                     color = (0, 255, 0) if box.cls == 0 else (0, 0, 255)
                     # box.xyxy, box.cls는 tensor
                     position = list(map(int, box.xyxy.tolist()[0])) # 출력값은 float인데 int로 변환
+                    # Class ID
+                    # 0: Fire
+                    # 1: Person
                     detect_class_id = int(box.cls.tolist()[0])
                     detect_class_label = 'person' if detect_class_id == 1 else 'fire'
+
+                    if detect_class_id == 1:
+                        person_count += 1
 
                     result_frame = cv2.rectangle(result_frame, (position[0], position[1]), (position[2], position[3]), color, 2)
 
@@ -75,6 +83,7 @@ def detect(index, changed_index):
             fire[changed_index] = True
     
             detect_ready[changed_index] = True
+            detected_people[changed_index] = person_count
             result_frames[changed_index] = result_frame
     
     cap.release()

@@ -79,6 +79,7 @@ void setup() {
 }
 
 void loop() {
+  //////// SPRINKLER ////////
   if (sprinklerOn[0]) digitalWrite(SPRINKLER1, HIGH);
   else digitalWrite(SPRINKLER1, LOW);
 
@@ -91,6 +92,7 @@ void loop() {
   if (sprinklerOn[3]) digitalWrite(SPRINKLER4, HIGH);
   else digitalWrite(SPRINKLER4, LOW);
 
+  //////// LED ////////
   if (ledOn[0] && !ecoMode) digitalWrite(LED1, HIGH);
   else digitalWrite(LED1, LOW);
 
@@ -103,6 +105,7 @@ void loop() {
   if (ledOn[4] && !ecoMode) digitalWrite(LED4, HIGH);
   else digitalWrite(LED4, LOW);
 
+  //////// DC MOTOR ////////
   if (motorOn && !ecoMode) digitalWrite(MOTOR, HIGH);
   else digitalWrite(MOTOR, LOW);
 
@@ -116,11 +119,6 @@ void loop() {
     lcd4.setCursor(0, 0);
 
     if (serInput.key == "FireAt") { // "FireAt:3"
-      lcd1.clear();
-      lcd2.clear();
-      lcd3.clear();
-      lcd4.clear();
-
       if (serInput.value != "-1") { // -1은 불이 감지 안 됐을 때
         sprintf(str, "Fire on %dF", serInput.value.toInt());
         lcd1.print(str);
@@ -144,6 +142,11 @@ void loop() {
 
         if (serInput.value.toInt() >= 4) lcd4.print("Evac Downstairs");
         else lcd4.print("Evac Upstairs");
+      } else {
+        lcd1.clear();
+        lcd2.clear();
+        lcd3.clear();
+        lcd4.clear();
       }
     } else if (serInput.key == "EcoMode") { // "EcoMode:1"
       ecoMode = serInput.value == "1";
