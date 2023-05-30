@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv(verbose=True)
 
 # 시리얼 포트 설정
-ser = serial.Serial(port='COM11', baudrate=9600)
+ser = serial.Serial(port='COM4', baudrate=115200)
 
 model = YOLO('best.pt')
 
@@ -31,7 +31,7 @@ def iot_stream_handler(message):
 
 firebase = pyrebase.initialize_app(config)
 db = firebase.database()
-iot_stream = db.child('').stream(iot_stream_handler)
+iot_stream = db.child('light').stream(iot_stream_handler)
 
 ## Loop
 done = False
@@ -48,8 +48,7 @@ def detect(index, changed_index):
         success, frame = cap.read()
 
         if success:
-            print(f"predict {index}")
-            results = model.predict(frame, half=True, device='cpu')
+            results = model.predict(frame, half=True, device='cpu', verbose=False)
             result_frame = frame
 
             person_count = 0
@@ -67,7 +66,10 @@ def detect(index, changed_index):
                     detect_class_id = int(box.cls.tolist()[0])
                     detect_class_label = 'person' if detect_class_id == 1 else 'fire'
 
-                    if detect_class_id == 1:
+                    if detect_class_id == 0: # On fire detected
+                        fire[changed_index] = True
+
+                    if detect_class_id == 1: # On person detected
                         person_count += 1
 
                     result_frame = cv2.rectangle(result_frame, (position[0], position[1]), (position[2], position[3]), color, 2)
@@ -76,22 +78,36 @@ def detect(index, changed_index):
 
             result_frame = cv2.putText(result_frame, f"{changed_index+1}Floor", (0, 50), cv2.FONT_HERSHEY_DUPLEX, 2, (255, 255, 0), 2, cv2.LINE_AA)
 
-            
-                # 아두이노로 데이터 전송
-                #py_serial.write(b'Fire detected\n')
-
-            fire[changed_index] = True
-    
             detect_ready[changed_index] = True
             detected_people[changed_index] = person_count
-            result_frames[changed_index] = result_frame
+            result_frames[-changed_index] = result_frame
     
     cap.release()
 
-t0 = threading.Thread(target=detect, args=(0, 1))
-t1 = threading.Thread(target=detect, args=(1, 3))
-t2 = threading.Thread(target=detect, args=(2, 2))
-t3 = threading.Thread(target=detect, args=(3, 0))
+def sendSerial():
+    while not done:
+        fire_floor = fire.index(True) + 1
+        if fire_floor > 0:
+            print(f"FireAt:{fire_floor}")
+            ser.write(f'FireAt:{fire_floor}\n'.encode())
+        if sum(detected_people) == 0:
+            print('EcoMode:1')
+            ser.write('EcoMode:1\n'.encode())
+        else:
+            print('EcoMode:0')
+            ser.write('EcoMode:0\n'.encode())
+
+t0 = threading.Thread(target=detect, args=(3, 2))
+t1 = threading.Thread(target=detect, args=(2, 0))
+t2 = threading.Thread(target=detect, args=(1, 1))
+t3 = threading.Thread(target=detect, args=(0, 3))
+
+serial_thread = threading.Thread(target=sendSerial)
+
+t0.daemon = False
+t1.daemon = False
+t2.daemon = False
+t3.daemon = False
 
 t0.start()
 t1.start()
@@ -110,21 +126,10 @@ while not done:
             visual_frame = cv2.vconcat([cv2.hconcat(result_frames[:2]), cv2.hconcat(result_frames[2:])])
             cv2.imshow("Object Detection", visual_frame)
 
-        try:
-            fire_floor = fire.index(True) + 1
-            if fire_floor > 0:
-                ser.write(f'FireAt:{fire_floor}\n'.encode())
-            if sum(detected_people) == 0:
-                ser.write('EcoMode:1'.encode())
-            else:
-                ser.write('EcoMode:0'.encode())
-        except:
-            pass
-
-
         if cv2.waitKey(1) == ord("q"):
             done = True
     except KeyboardInterrupt:
         done = True
 
+ser.close()
 cv2.destroyAllWindows()
