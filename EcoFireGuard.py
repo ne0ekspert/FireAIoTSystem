@@ -13,8 +13,10 @@ from dotenv import load_dotenv
 ## Initial Settings
 load_dotenv(verbose=True)
 
+LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY'))
+
 # 시리얼 포트 설정
-ser = serial.Serial(port='COM4', baudrate=115200)
+ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=115200)
 
 model = YOLO('best.pt')
 
@@ -54,7 +56,10 @@ def detect(index, changed_index) -> None:
             results = model.predict(frame, half=True, device='cpu', verbose=False)
             result_frame = frame
 
-            detected_objects = []
+            detected_objects = {
+                'fire': 0,
+                'person': 0
+            }
 
             for result in results:
                 boxes = result.boxes
@@ -70,10 +75,10 @@ def detect(index, changed_index) -> None:
                     detect_class_label: str = 'person' if detect_class_id == 1 else 'fire'
 
                     if detect_class_id == 0: # On fire detected
-                        detected_objects.append('fire')
+                        detected_objects['fire'] += 1
 
                     if detect_class_id == 1: # On person detected
-                        detected_objects.append('person')
+                        detected_objects['person'] += 1
 
                     result_frame = cv2.rectangle(result_frame, (position[0], position[1]), (position[2], position[3]), color, 2)
 
@@ -82,8 +87,8 @@ def detect(index, changed_index) -> None:
             result_frame = cv2.putText(result_frame, f"{changed_index+1}Floor", (0, 50), cv2.FONT_HERSHEY_DUPLEX, 2, (255, 255, 0), 2, cv2.LINE_AA)
 
             detect_ready[changed_index] = True
-            detected_people[changed_index] = detected_objects.count('person')
-            fire[changed_index] = True if detected_objects.count('fire') > 0 else False
+            detected_people[changed_index] = detected_objects['person']
+            fire[changed_index] = True if detected_objects['fire'] > 0 else False
             result_frames[-changed_index-1] = result_frame
     
     cap.release()
@@ -106,6 +111,16 @@ def sendSerial() -> None:
         else:
             print('EcoMode:0')
             ser.write('EcoMode:0\n'.encode())
+
+        ser.write(f"CtrlIoT:0{iot_status['LED1']}".encode())
+        ser.write(f"CtrlIoT:1{iot_status['LED2']}".encode())
+        ser.write(f"CtrlIoT:2{iot_status['LED3']}".encode())
+        ser.write(f"CtrlIoT:3{iot_status['LED4']}".encode())
+
+        ser.write(f"CtrlIoT:X{iot_status['MOTOR1']}".encode())
+        ser.write(f"CtrlIoT:Y{iot_status['MOTOR2']}".encode())
+
+        time.sleep(LCD_REFRESH_DELAY)
 
     ser.close()
     return

@@ -32,6 +32,45 @@ struct serialInput serInput;
 bool ecoMode = false;
 char str[16];
 
+String* splitString(const String& inputString, const char delimiter, int& substringCount) {
+  // Temporary character array to hold the input string
+  char inputCharArray[inputString.length() + 1];
+  inputString.toCharArray(inputCharArray, sizeof(inputCharArray));
+
+  // Split the string
+  char* strtokContext = nullptr;
+  char* token = strtok_r(inputCharArray, &delimiter, &strtokContext);
+
+  // Dynamic array to store substrings
+  String* substrings = nullptr;
+  int maxSubstrings = 0;
+
+  while (token != nullptr) {
+    if (substringCount >= maxSubstrings) {
+      // Increase the size of the substrings array
+      maxSubstrings += 5; // Increase by a fixed number, you can modify this as needed
+      String* newSubstrings = new String[maxSubstrings];
+
+      // Copy the existing substrings to the new array
+      for (int i = 0; i < substringCount; i++) {
+        newSubstrings[i] = substrings[i];
+      }
+
+      // Delete the old array
+      delete[] substrings;
+
+      // Assign the new array
+      substrings = newSubstrings;
+    }
+
+    substrings[substringCount] = String(token);
+    token = strtok_r(nullptr, &delimiter, &strtokContext);
+    substringCount++;
+  }
+
+  return substrings;
+}
+
 void setup() { 
   Serial.begin(115200);
 
@@ -112,8 +151,8 @@ void loop() {
   if (motorOn[0] && !ecoMode) digitalWrite(MOTOR1, HIGH);
   else digitalWrite(MOTOR1, LOW);
 
-  if (motorOn[1] && !ecoMode) digitalWrite(MOTOR1, HIGH);
-  else digitalWrite(MOTOR1, LOW);
+  if (motorOn[1] && !ecoMode) digitalWrite(MOTOR2, HIGH);
+  else digitalWrite(MOTOR2, LOW);
 
   if (Serial.available()) {
     serInput.key = Serial.readStringUntil(':');
@@ -131,7 +170,20 @@ void loop() {
       lcd4.clear();
 
       if (serInput.value != "0") { // -1은 불이 감지 안 됐을 때
-        sprintf(str, "Fire on %dF", serInput.value.toInt());
+        bool fireAboveBelow[4][2] = {
+          {false, false},
+          {false, false},
+          {false, false},
+          {false, false}
+        };
+        int fireDetectionCount;
+        String *fireDetectionStrArr = splitString(serInput.value, ',', fireDetectionCount);
+        int fireDetectionArr[4];
+        for (int i=0;i<4;i++) {
+          fireDetectionArr[i] = fireDetectionStrArr[i].toInt();
+        }
+
+        sprintf(str, "Fire on %sF", serInput.value);
         lcd1.print(str);
         lcd2.print(str);
         lcd3.print(str);
@@ -142,17 +194,28 @@ void loop() {
         lcd3.setCursor(0, 1);
         lcd4.setCursor(0, 1);
 
-        if (serInput.value.toInt() >= 1) lcd1.print("Evac Downstairs");
-        else lcd1.print("Evac Upstairs");
+        for (int i=0;i<4;i++) {
+          for (int floor : fireDetectionArr) {
+            if (floor > i+1) fireAboveBelow[i][0] = true; // Above
+            if (floor < i+1) fireAboveBelow[i][1] = true; // Below
+          }
+        }
 
-        if (serInput.value.toInt() >= 2) lcd2.print("Evac Downstairs");
-        else lcd2.print("Evac Upstairs");
+        if (fireAboveBelow[0][0]) lcd1.print("Evac Downstairs");
+        else if (fireAboveBelow[0][1]) lcd1.print("Evac Upstairs");
+        else lcd1.print("Wait for instr");
 
-        if (serInput.value.toInt() >= 3) lcd3.print("Evac Downstairs");
-        else lcd3.print("Evac Upstairs");
+        if (fireAboveBelow[1][0]) lcd2.print("Evac Downstairs");
+        else if (fireAboveBelow[1][1]) lcd2.print("Evac Upstairs");
+        else lcd1.print("Wait for instr");
 
-        if (serInput.value.toInt() >= 4) lcd4.print("Evac Downstairs");
-        else lcd4.print("Evac Upstairs");
+        if (fireAboveBelow[2][0]) lcd3.print("Evac Downstairs");
+        else if (fireAboveBelow[2][1]) lcd3.print("Evac Upstairs");
+        else lcd1.print("Wait for instr");
+
+        if (fireAboveBelow[3][0]) lcd4.print("Evac Downstairs");
+        else if (fireAboveBelow[3][1]) lcd4.print("Evac Upstairs");
+        else lcd1.print("Wait for instr");
       }
     } else if (serInput.key == "EcoMode") { // "EcoMode:1"
       ecoMode = serInput.value == "1";
@@ -164,9 +227,11 @@ void loop() {
         case '3':
           ledOn[serInput.value[0] - '0'] = serInput.value[1] == '1';
           break;
-        case 'M':
-          motorOn[serInput.value[0] - '0'] = serInput.value[1] == '1';
+        case 'X':
+          motorOn[0] = serInput.value[1] == '1';
           break;
+        case 'Y':
+          motorOn[1] = serInput.value[1] == '1';
       }
     }
   }
