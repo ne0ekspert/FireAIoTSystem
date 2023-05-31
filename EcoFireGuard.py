@@ -116,10 +116,14 @@ t1.daemon = True
 t2.daemon = True
 t3.daemon = True
 
+serial_thread.daemon = True
+
 t0.start()
 t1.start()
 t2.start()
 t3.start()
+
+serial_thread.start()
 
 cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
 
