@@ -30,45 +30,33 @@ struct serialInput {
 struct serialInput serInput;
 
 bool ecoMode = false;
-char str[16];
+char str[16]; // For LCD Output
+char buf[16]; // For String.toCharArray()
 
-String* splitString(const String& inputString, const char delimiter, int& substringCount) {
-  // Temporary character array to hold the input string
-  char inputCharArray[inputString.length() + 1];
-  inputString.toCharArray(inputCharArray, sizeof(inputCharArray));
-
-  // Split the string
-  char* strtokContext = nullptr;
-  char* token = strtok_r(inputCharArray, &delimiter, &strtokContext);
-
-  // Dynamic array to store substrings
-  String* substrings = nullptr;
-  int maxSubstrings = 0;
-
-  while (token != nullptr) {
-    if (substringCount >= maxSubstrings) {
-      // Increase the size of the substrings array
-      maxSubstrings += 5; // Increase by a fixed number, you can modify this as needed
-      String* newSubstrings = new String[maxSubstrings];
-
-      // Copy the existing substrings to the new array
-      for (int i = 0; i < substringCount; i++) {
-        newSubstrings[i] = substrings[i];
-      }
-
-      // Delete the old array
-      delete[] substrings;
-
-      // Assign the new array
-      substrings = newSubstrings;
+String* splitString(const String& inputString, const char delimiter, byte& tokenCount) {
+  const int maxTokens = 10; // Maximum number of tokens
+  String* tokens = new String[maxTokens]; // Array of String objects
+  
+  int tokenIndex = 0; // Index of current token
+  
+  int length = inputString.length();
+  int startIndex = 0; // Start index of the token
+  
+  for (int i = 0; i < length; i++) {
+    if (inputString.charAt(i) == delimiter) {
+      tokens[tokenIndex++] = inputString.substring(startIndex, i);
+      startIndex = i + 1;
     }
-
-    substrings[substringCount] = String(token);
-    token = strtok_r(nullptr, &delimiter, &strtokContext);
-    substringCount++;
   }
-
-  return substrings;
+  
+  // Add the last token
+  if (startIndex < length) {
+    tokens[tokenIndex++] = inputString.substring(startIndex, length);
+  }
+  
+  tokenCount = tokenIndex; // Update the tokenCount variable
+  
+  return tokens;
 }
 
 void setup() { 
@@ -170,24 +158,28 @@ void loop() {
       lcd4.clear();
 
       if (serInput.value != "0") { // -1은 불이 감지 안 됐을 때
+        Serial.println("Detected Fire");
+        byte fireArrLength, fireFloors[4];
+        String *fireArr = splitString(serInput.value, ',', fireArrLength);
+        Serial.println("text split done");
+        for(int i=0;i<fireArrLength;i++) fireFloors[i] = fireArr[i].toInt();
         bool fireAboveBelow[4][2] = {
           {false, false},
           {false, false},
           {false, false},
           {false, false}
         };
-        int fireDetectionCount;
-        String *fireDetectionStrArr = splitString(serInput.value, ',', fireDetectionCount);
-        int fireDetectionArr[4];
-        for (int i=0;i<4;i++) {
-          fireDetectionArr[i] = fireDetectionStrArr[i].toInt();
-        }
+        Serial.println(serInput.value);
+        for (int i=0;i<fireArrLength;i++) Serial.println(fireArr[i]);
 
-        sprintf(str, "Fire on %sF", serInput.value);
+        serInput.value.toCharArray(buf, 16);
+        sprintf(str, "Fire on %sF", buf);
         lcd1.print(str);
         lcd2.print(str);
         lcd3.print(str);
         lcd4.print(str);
+        Serial.print("LCD: ");
+        Serial.println(str);
 
         lcd1.setCursor(0, 1);
         lcd2.setCursor(0, 1);
@@ -195,11 +187,19 @@ void loop() {
         lcd4.setCursor(0, 1);
 
         for (int i=0;i<4;i++) {
-          for (int floor : fireDetectionArr) {
+          for (int floor : fireFloors) {
             if (floor > i+1) fireAboveBelow[i][0] = true; // Above
             if (floor < i+1) fireAboveBelow[i][1] = true; // Below
           }
         }
+
+        for (int i=0;i<4;i++) sprinklerOn[i] = false;
+        for (int floor : fireFloors) sprinklerOn[floor-1] = true;
+
+        Serial.println(sprinklerOn[0]);
+        Serial.println(sprinklerOn[1]);
+        Serial.println(sprinklerOn[2]);
+        Serial.println(sprinklerOn[3]);
 
         if (fireAboveBelow[0][0]) lcd1.print("Evac Downstairs");
         else if (fireAboveBelow[0][1]) lcd1.print("Evac Upstairs");
