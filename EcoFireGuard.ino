@@ -125,7 +125,12 @@ void loop() {
     lcd4.setCursor(0, 0);
 
     if (serInput.key == "FireAt") { // "FireAt:3"
-      if (serInput.value != "-1") { // -1은 불이 감지 안 됐을 때
+      lcd1.clear();
+      lcd2.clear();
+      lcd3.clear();
+      lcd4.clear();
+
+      if (serInput.value != "0") { // -1은 불이 감지 안 됐을 때
         sprintf(str, "Fire on %dF", serInput.value.toInt());
         lcd1.print(str);
         lcd2.print(str);
@@ -148,11 +153,6 @@ void loop() {
 
         if (serInput.value.toInt() >= 4) lcd4.print("Evac Downstairs");
         else lcd4.print("Evac Upstairs");
-      } else {
-        lcd1.clear();
-        lcd2.clear();
-        lcd3.clear();
-        lcd4.clear();
       }
     } else if (serInput.key == "EcoMode") { // "EcoMode:1"
       ecoMode = serInput.value == "1";

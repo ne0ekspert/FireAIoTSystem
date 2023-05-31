@@ -54,7 +54,7 @@ def detect(index, changed_index) -> None:
             results = model.predict(frame, half=True, device='cpu', verbose=False)
             result_frame = frame
 
-            person_count = 0
+            detected_objects = []
 
             for result in results:
                 boxes = result.boxes
@@ -70,10 +70,10 @@ def detect(index, changed_index) -> None:
                     detect_class_label: str = 'person' if detect_class_id == 1 else 'fire'
 
                     if detect_class_id == 0: # On fire detected
-                        fire[changed_index] = True
+                        detected_objects.append('fire')
 
                     if detect_class_id == 1: # On person detected
-                        person_count += 1
+                        detected_objects.append('person')
 
                     result_frame = cv2.rectangle(result_frame, (position[0], position[1]), (position[2], position[3]), color, 2)
 
@@ -82,7 +82,8 @@ def detect(index, changed_index) -> None:
             result_frame = cv2.putText(result_frame, f"{changed_index+1}Floor", (0, 50), cv2.FONT_HERSHEY_DUPLEX, 2, (255, 255, 0), 2, cv2.LINE_AA)
 
             detect_ready[changed_index] = True
-            detected_people[changed_index] = person_count
+            detected_people[changed_index] = detected_objects.count('person')
+            fire[changed_index] = True if detected_objects.count('fire') > 0 else False
             result_frames[-changed_index-1] = result_frame
     
     cap.release()
