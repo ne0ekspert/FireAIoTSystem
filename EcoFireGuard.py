@@ -87,15 +87,17 @@ def detect(index, changed_index) -> None:
             result_frames[-changed_index-1] = result_frame
     
     cap.release()
+    return 
 
 def sendSerial() -> None:
     while not done:
-        fire_floor = fire.index(True) + 1
-        
-        if fire_floor > 0:
-            print(f"FireAt:{fire_floor}")
-            ser.write(f'FireAt:{fire_floor}\n'.encode())
-        if fire_floor == 0:
+        try:
+            fire_floor = fire.index(True) + 1
+            
+            if fire_floor > 0:
+                print(f"FireAt:{fire_floor}")
+                ser.write(f'FireAt:{fire_floor}\n'.encode())
+        except:
             ser.write(f'FireAt:-1\n'.encode())
 
         if sum(detected_people) == 0:
@@ -104,6 +106,9 @@ def sendSerial() -> None:
         else:
             print('EcoMode:0')
             ser.write('EcoMode:0\n'.encode())
+
+    ser.close()
+    return
 
 t0 = threading.Thread(target=detect, args=(3, 0))
 t1 = threading.Thread(target=detect, args=(2, 2))
@@ -139,5 +144,4 @@ while not done:
     except KeyboardInterrupt:
         done = True
 
-ser.close()
 cv2.destroyAllWindows()
