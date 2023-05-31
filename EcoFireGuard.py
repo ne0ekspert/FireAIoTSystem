@@ -80,7 +80,7 @@ def detect(index, changed_index):
 
             detect_ready[changed_index] = True
             detected_people[changed_index] = person_count
-            result_frames[-changed_index] = result_frame
+            result_frames[-changed_index-1] = result_frame
     
     cap.release()
 
@@ -97,10 +97,10 @@ def sendSerial():
             print('EcoMode:0')
             ser.write('EcoMode:0\n'.encode())
 
-t0 = threading.Thread(target=detect, args=(3, 2))
-t1 = threading.Thread(target=detect, args=(2, 0))
-t2 = threading.Thread(target=detect, args=(1, 1))
-t3 = threading.Thread(target=detect, args=(0, 3))
+t0 = threading.Thread(target=detect, args=(3, 0))
+t1 = threading.Thread(target=detect, args=(2, 2))
+t2 = threading.Thread(target=detect, args=(1, 3))
+t3 = threading.Thread(target=detect, args=(0, 1))
 
 serial_thread = threading.Thread(target=sendSerial)
 
@@ -113,10 +113,6 @@ t0.start()
 t1.start()
 t2.start()
 t3.start()
-
-for i in range(10, 0, -1):
-    print(f"{i}... ", end='')
-    time.sleep(1)
 
 cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
 
