@@ -26,7 +26,10 @@ config = {
     "storageBucket": os.getenv('FIREBASE_STORAGEBUCKET')
 }
 
+iot_status: dict[str, str] = {}
 def iot_stream_handler(message):
+    global iot_status
+    iot_status = message['data']
     print(message['data'])
 
 firebase = pyrebase.initialize_app(config)
@@ -36,12 +39,12 @@ iot_stream = db.child('light').stream(iot_stream_handler)
 ## Loop
 done = False
 
-detected_people = [ 0, 0, 0, 0 ]
-fire = [ False, False, False, False ]
-detect_ready = [ False, False, False, False ]
+detected_people: list[int] = [ 0, 0, 0, 0 ]
+fire: list[bool] = [ False, False, False, False ]
+detect_ready: list[bool] = [ False, False, False, False ]
 result_frames = [ None, None, None, None ]
 
-def detect(index, changed_index):
+def detect(index, changed_index) -> None:
     cap = cv2.VideoCapture(index)
 
     while not done:
@@ -57,14 +60,14 @@ def detect(index, changed_index):
                 boxes = result.boxes
 
                 for box in boxes:
-                    color = (0, 255, 0) if box.cls == 0 else (0, 0, 255)
+                    color: tuple[int, int, int] = (0, 255, 0) if box.cls == 0 else (0, 0, 255)
                     # box.xyxy, box.cls는 tensor
                     position = list(map(int, box.xyxy.tolist()[0])) # 출력값은 float인데 int로 변환
                     # Class ID
                     # 0: Fire
                     # 1: Person
                     detect_class_id = int(box.cls.tolist()[0])
-                    detect_class_label = 'person' if detect_class_id == 1 else 'fire'
+                    detect_class_label: str = 'person' if detect_class_id == 1 else 'fire'
 
                     if detect_class_id == 0: # On fire detected
                         fire[changed_index] = True
@@ -84,12 +87,16 @@ def detect(index, changed_index):
     
     cap.release()
 
-def sendSerial():
+def sendSerial() -> None:
     while not done:
         fire_floor = fire.index(True) + 1
+        
         if fire_floor > 0:
             print(f"FireAt:{fire_floor}")
             ser.write(f'FireAt:{fire_floor}\n'.encode())
+        if fire_floor == 0:
+            ser.write(f'FireAt:-1\n'.encode())
+
         if sum(detected_people) == 0:
             print('EcoMode:1')
             ser.write('EcoMode:1\n'.encode())
@@ -104,10 +111,10 @@ t3 = threading.Thread(target=detect, args=(0, 3))
 
 serial_thread = threading.Thread(target=sendSerial)
 
-t0.daemon = False
-t1.daemon = False
-t2.daemon = False
-t3.daemon = False
+t0.daemon = True
+t1.daemon = True
+t2.daemon = True
+t3.daemon = True
 
 t0.start()
 t1.start()
