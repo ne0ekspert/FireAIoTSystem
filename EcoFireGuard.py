@@ -28,11 +28,19 @@ config = {
     "storageBucket": os.getenv('FIREBASE_STORAGEBUCKET')
 }
 
-iot_status: dict[str, str] = {}
+iot_status: dict[str, str] = {
+    'LED1': 'false',
+    'LED2': 'false',
+    'LED3': 'false',
+    'LED4': 'false',
+    'MOTOR1': 'false',
+    'MOTOR2': 'false'
+}
 def iot_stream_handler(message):
     global iot_status
-    iot_status = message['data']
-    print(message['data'])
+    path = message['path'][1:]
+    iot_status[path] = message['data']
+    print(message)
 
 firebase = pyrebase.initialize_app(config)
 db = firebase.database()
@@ -97,11 +105,14 @@ def detect(index, changed_index) -> None:
 def sendSerial() -> None:
     while not done:
         try:
-            fire_floor = fire.index(True) + 1
+            fire_floor = []
+            for i in range(len(fire)):
+                if fire[i]:
+                    fire_floor.append(str(i+1))
             
-            if fire_floor > 0:
-                print(f"FireAt:{fire_floor}")
-                ser.write(f'FireAt:{fire_floor}\n'.encode())
+            if len(fire_floor) > 0:
+                print(f"FireAt:{','.join(fire_floor)}")
+                ser.write(f"FireAt:{','.join(fire_floor)}\n".encode())
         except:
             ser.write(f'FireAt:-1\n'.encode())
 
