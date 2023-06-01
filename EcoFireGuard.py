@@ -16,7 +16,7 @@ load_dotenv(verbose=True)
 LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY'))
 
 # 시리얼 포트 설정
-ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=115200)
+ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=9600)
 
 model = YOLO('best.pt')
 
@@ -29,12 +29,12 @@ config = {
 }
 
 iot_status: dict[str, str] = {
-    'LED1': 'false',
-    'LED2': 'false',
-    'LED3': 'false',
-    'LED4': 'false',
-    'MOTOR1': 'false',
-    'MOTOR2': 'false'
+    'LED1': '0',
+    'LED2': '0',
+    'LED3': '0',
+    'LED4': '0',
+    'MOTOR1': '0',
+    'MOTOR2': '0'
 }
 def iot_stream_handler(message):
     global iot_status
@@ -53,6 +53,8 @@ detected_people: list[int] = [ 0, 0, 0, 0 ]
 fire: list[bool] = [ False, False, False, False ]
 detect_ready: list[bool] = [ False, False, False, False ]
 result_frames = [ None, None, None, None ]
+
+time.sleep(1)
 
 def detect(index, changed_index) -> None:
     cap = cv2.VideoCapture(index)
@@ -104,32 +106,44 @@ def detect(index, changed_index) -> None:
 
 def sendSerial() -> None:
     while not done:
-        try:
-            fire_floor = []
-            for i in range(len(fire)):
-                if fire[i]:
-                    fire_floor.append(str(i+1))
-            
-            if len(fire_floor) > 0:
-                print(f"FireAt:{','.join(fire_floor)}")
-                ser.write(f"FireAt:{','.join(fire_floor)}\n".encode())
-        except:
-            ser.write(f'FireAt:-1\n'.encode())
+
+        fire_floor = []
+        for i in range(len(fire)):
+            if fire[i]:
+                fire_floor.append(str(i+1))
+        
+        if len(fire_floor) > 0:
+            ser.write(f"FireAt:{','.join(fire_floor)}\n".encode())
+        else:
+            ser.write('FireAt:0\n'.encode())
+        ser.flush()
 
         if sum(detected_people) == 0:
-            print('EcoMode:1')
             ser.write('EcoMode:1\n'.encode())
         else:
-            print('EcoMode:0')
             ser.write('EcoMode:0\n'.encode())
+        ser.flush()
 
-        ser.write(f"CtrlIoT:0{iot_status['LED1']}".encode())
-        ser.write(f"CtrlIoT:1{iot_status['LED2']}".encode())
-        ser.write(f"CtrlIoT:2{iot_status['LED3']}".encode())
-        ser.write(f"CtrlIoT:3{iot_status['LED4']}".encode())
+        ser.write(f"CtrlIoT:0{iot_status['LED1']}\n".encode())
+        ser.flush()
+        ser.write(f"CtrlIoT:1{iot_status['LED2']}\n".encode())
+        ser.flush()
+        ser.write(f"CtrlIoT:2{iot_status['LED3']}\n".encode())
+        ser.flush()
+        ser.write(f"CtrlIoT:3{iot_status['LED4']}\n".encode())
+        ser.flush()
 
-        ser.write(f"CtrlIoT:X{iot_status['MOTOR1']}".encode())
-        ser.write(f"CtrlIoT:Y{iot_status['MOTOR2']}".encode())
+        ser.write(f"CtrlIoT:X{iot_status['MOTOR1']}\n".encode())
+        ser.flush()
+        ser.write(f"CtrlIoT:Y{iot_status['MOTOR2']}\n".encode())
+        ser.flush()
+
+        ret = ser.read_all()
+        print("=== DATA ===")
+        try:
+            print(ret.decode())
+        except:
+            print()
 
         time.sleep(LCD_REFRESH_DELAY)
 
