@@ -3,17 +3,24 @@ import crypto
 sys.modules['Crypto'] = crypto
 import cv2
 from ultralytics import YOLO
-import numpy as np
+from gtts import gTTS
+from playsound import playsound
 import time
 import serial
 import pyrebase
 import threading
+import requests
 from dotenv import load_dotenv
 
 ## Initial Settings
 load_dotenv(verbose=True)
 
-LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY'))
+LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY') or 5.0)
+
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+WEBHOOK_REFRESH_DELAY = float(os.getenv('WEBHOOK_REFRESH_DELAY') or 5.0)
+
+ALERT_REFRESH_DELAY = float(os.getenv('ALERT_REFRESH_DELAY') or 5.0)
 
 # 시리얼 포트 설정
 ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=115200)
@@ -21,6 +28,7 @@ ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=115200)
 model = YOLO('best.pt')
 
 ## Firebase
+## IoT 제어용으로 사용
 config = {
     "apiKey": os.getenv('FIREBASE_APIKEY'),
     "authDomain": os.getenv('FIREBASE_AUTHDOMAIN'),
@@ -100,9 +108,58 @@ def detect(index, changed_index) -> None:
             result_frames[-changed_index-1] = result_frame
     
     cap.release()
-    return 
 
-def sendSerial() -> None:
+def webhookData(message: str):
+    return {
+        "content": message,
+        "text": message
+    }
+
+def sendWebhook():
+    last_sent_timestamp = time.time()
+
+    while not done:
+        fire_floor = []
+        for i in range(len(fire)):
+            if fire[i]:
+                fire_floor.append(str(i+1))
+            
+        if len(fire_floor) > 0:
+            data = webhookData(f"Fire detected on floor {', '.join(fire_floor)}")
+            if last_sent_timestamp + WEBHOOK_REFRESH_DELAY >= time.time():
+                requests.post(WEBHOOK_URL, data)
+                last_sent_timestamp = time.time()
+
+def alert():
+    last_alert_timestamp = time.time()
+    folder = 'res'
+
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    
+    while not done:
+        if last_alert_timestamp + ALERT_REFRESH_DELAY >= time.time():
+            fire_floor: list[str] = []
+            for i in range(len(fire)):
+                if fire[i]:
+                    fire_floor.append(str(i+1))
+
+            if len(fire_floor) > 0:
+                text = f"{'층, '.join(fire_floor)}층에 화재가 감지되었습니다."
+                filename = f"{text.lower().replace(' ', '_')}.wav"
+                filepath = os.path.join(folder, filename)
+    
+                if not os.path.exists(filepath):
+                    tts = gTTS(text=text, lang='ko')
+                    tts.save(filepath)
+                    print(f"WAV file '{filename}' generated successfully.")
+                else:
+                    print(f"WAV file '{filename}' already exists.")
+                
+                playsound(filepath)
+        
+
+def delivery() -> None:
     while not done:
         try:
             fire_floor = []
@@ -134,28 +191,30 @@ def sendSerial() -> None:
         time.sleep(LCD_REFRESH_DELAY)
 
     ser.close()
-    return
 
 t0 = threading.Thread(target=detect, args=(3, 0))
 t1 = threading.Thread(target=detect, args=(2, 2))
 t2 = threading.Thread(target=detect, args=(1, 3))
 t3 = threading.Thread(target=detect, args=(0, 1))
 
-serial_thread = threading.Thread(target=sendSerial)
+delivery_thread = threading.Thread(target=delivery)
+webhook_thread = threading.Thread(target=sendWebhook)
 
 t0.daemon = True
 t1.daemon = True
 t2.daemon = True
 t3.daemon = True
 
-serial_thread.daemon = True
+delivery_thread.daemon = True
+webhook_thread.daemon = True
 
 t0.start()
 t1.start()
 t2.start()
 t3.start()
 
-serial_thread.start()
+delivery_thread.start()
+webhook_thread.start()
 
 cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
 
