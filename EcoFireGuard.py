@@ -71,7 +71,10 @@ def detect(index, changed_index) -> None:
         success, frame = cap.read()
 
         if success:
-            results = model.predict(frame, half=True, device='cpu', verbose=False)
+            try:
+                results = model.predict(frame, half=True, device='cpu', verbose=False)
+            except:
+                continue
             result_frame = frame
 
             detected_objects = {
@@ -111,46 +114,40 @@ def detect(index, changed_index) -> None:
     
     cap.release()
 
-def webhookData(message: str):
-    return {
-        "content": message,
-        "text": message
-    }
+def delivery() -> None:
+    def webhookData(message: str):
+        return {
+            "content": message,
+            "text": message
+        }
 
-def sendWebhook():
     last_sent_timestamp = time.time()
+    last_alert_timestamp = time.time()
+
+    folder = 'res'
+
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
     while not done:
         fire_floor = []
         for i in range(len(fire)):
             if fire[i]:
                 fire_floor.append(str(i+1))
-            
+        
         if len(fire_floor) > 0:
+            ser.write(f"FireAt:{','.join(fire_floor)}\n".encode())
+
             data = webhookData(f"Fire detected on floor {', '.join(fire_floor)}")
             if last_sent_timestamp + WEBHOOK_REFRESH_DELAY >= time.time():
                 requests.post(WEBHOOK_URL, data)
                 last_sent_timestamp = time.time()
 
-def alert():
-    last_alert_timestamp = time.time()
-    folder = 'res'
-
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-    
-    while not done:
-        if last_alert_timestamp + ALERT_REFRESH_DELAY >= time.time():
-            fire_floor: list[str] = []
-            for i in range(len(fire)):
-                if fire[i]:
-                    fire_floor.append(str(i+1))
-
-            if len(fire_floor) > 0:
+            if last_alert_timestamp + ALERT_REFRESH_DELAY >= time.time():
                 text = f"{'층, '.join(fire_floor)}층에 화재가 감지되었습니다."
                 filename = f"res/fireat_{''.join(fire_floor)}.wav"
                 filepath = os.path.join(folder, filename)
-    
+
                 if not os.path.exists(filepath):
                     tts = gTTS(text=text, lang='ko')
                     tts.save(filepath)
@@ -159,18 +156,6 @@ def alert():
                     print(f"WAV file '{filename}' already exists.")
                 
                 playsound(filepath)
-        
-
-def delivery() -> None:
-    while not done:
-
-        fire_floor = []
-        for i in range(len(fire)):
-            if fire[i]:
-                fire_floor.append(str(i+1))
-        
-        if len(fire_floor) > 0:
-            ser.write(f"FireAt:{','.join(fire_floor)}\n".encode())
         else:
             ser.write('FireAt:0\n'.encode())
         ser.flush()
@@ -201,18 +186,18 @@ def delivery() -> None:
             print(ret.decode())
         except:
             print()
-
+    
         time.sleep(LCD_REFRESH_DELAY)
 
     ser.close()
 
 t0 = threading.Thread(target=detect, args=(3, 0))
 t1 = threading.Thread(target=detect, args=(2, 2))
-t2 = threading.Thread(target=detect, args=(1, 3))
-t3 = threading.Thread(target=detect, args=(0, 1))
+t2 = threading.Thread(target=detect, args=(1, 1))
+t3 = threading.Thread(target=detect, args=(0, 3))
 
 delivery_thread = threading.Thread(target=delivery)
-webhook_thread = threading.Thread(target=sendWebhook)
+#webhook_thread = threading.Thread(target=sendWebhook)
 
 t0.daemon = True
 t1.daemon = True
@@ -220,7 +205,7 @@ t2.daemon = True
 t3.daemon = True
 
 delivery_thread.daemon = True
-webhook_thread.daemon = True
+#webhook_thread.daemon = True
 
 t0.start()
 t1.start()
@@ -228,7 +213,7 @@ t2.start()
 t3.start()
 
 delivery_thread.start()
-webhook_thread.start()
+#webhook_thread.start()
 
 cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
 
