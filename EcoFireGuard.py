@@ -117,6 +117,7 @@ def detect(index, changed_index) -> None:
 def delivery() -> None:
     def webhookData(message: str):
         return {
+            "username": "Fire Alert",
             "content": message,
             "text": message
         }
@@ -139,13 +140,19 @@ def delivery() -> None:
             ser.write(f"FireAt:{','.join(fire_floor)}\n".encode())
 
             data = webhookData(f"Fire detected on floor {', '.join(fire_floor)}")
-            if last_sent_timestamp + WEBHOOK_REFRESH_DELAY >= time.time():
-                requests.post(WEBHOOK_URL, data)
+            if last_sent_timestamp + WEBHOOK_REFRESH_DELAY <= time.time():
+                res = requests.post(WEBHOOK_URL, data, headers={
+                    'Content-Type': 'application/json'
+                })
+                if res.ok:
+                    print("Webhook sent")
+                else:
+                    print(res.status_code)
                 last_sent_timestamp = time.time()
 
-            if last_alert_timestamp + ALERT_REFRESH_DELAY >= time.time():
+            if last_alert_timestamp + ALERT_REFRESH_DELAY <= time.time():
                 text = f"{'층, '.join(fire_floor)}층에 화재가 감지되었습니다."
-                filename = f"res/fireat_{''.join(fire_floor)}.wav"
+                filename = f"fireat_{''.join(fire_floor)}.mp3"
                 filepath = os.path.join(folder, filename)
 
                 if not os.path.exists(filepath):
@@ -155,7 +162,8 @@ def delivery() -> None:
                 else:
                     print(f"WAV file '{filename}' already exists.")
                 
-                playsound(filepath)
+                playsound(filepath, block=False)
+                last_alert_timestamp = time.time()
         else:
             ser.write('FireAt:0\n'.encode())
         ser.flush()
