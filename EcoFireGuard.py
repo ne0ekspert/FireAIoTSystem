@@ -17,7 +17,7 @@ load_dotenv(verbose=True)
 
 LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY') or 5.0)
 
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+WEBHOOK_URL = os.getenv('WEBHOOK_URL') or ''
 WEBHOOK_REFRESH_DELAY = float(os.getenv('WEBHOOK_REFRESH_DELAY') or 5.0)
 
 ALERT_REFRESH_DELAY = float(os.getenv('ALERT_REFRESH_DELAY') or 5.0)
@@ -30,10 +30,10 @@ model = YOLO('best.pt')
 ## Firebase
 ## IoT 제어용으로 사용
 config = {
-    "apiKey": os.getenv('FIREBASE_APIKEY'),
-    "authDomain": os.getenv('FIREBASE_AUTHDOMAIN'),
-    "databaseURL": os.getenv('FIREBASE_DBURL'),
-    "storageBucket": os.getenv('FIREBASE_STORAGEBUCKET')
+    "apiKey": os.getenv('FIREBASE_APIKEY') or '',
+    "authDomain": os.getenv('FIREBASE_AUTHDOMAIN') or '',
+    "databaseURL": os.getenv('FIREBASE_DBURL') or '',
+    "storageBucket": os.getenv('FIREBASE_STORAGEBUCKET') or ''
 }
 
 iot_status: dict[str, str] = {
@@ -148,7 +148,7 @@ def alert():
 
             if len(fire_floor) > 0:
                 text = f"{'층, '.join(fire_floor)}층에 화재가 감지되었습니다."
-                filename = f"{text.lower().replace(' ', '_')}.wav"
+                filename = f"res/fireat_{''.join(fire_floor)}.wav"
                 filepath = os.path.join(folder, filename)
     
                 if not os.path.exists(filepath):
