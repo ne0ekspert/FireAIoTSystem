@@ -10,6 +10,7 @@ import serial
 import pyrebase
 import threading
 import requests
+import json
 from dotenv import load_dotenv
 
 ## Initial Settings
@@ -17,13 +18,7 @@ load_dotenv(verbose=True)
 
 LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY') or 5.0)
 
-WEBHOOK_URL = os.getenv('WEBHOOK_URL') or ''
-WEBHOOK_REFRESH_DELAY = float(os.getenv('WEBHOOK_REFRESH_DELAY') or 5.0)
 
-ALERT_REFRESH_DELAY = float(os.getenv('ALERT_REFRESH_DELAY') or 5.0)
-
-# 시리얼 포트 설정
-ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=9600)
 
 model = YOLO('best.pt')
 
@@ -42,12 +37,13 @@ iot_status: dict[str, str] = {
     'LED3': '0',
     'LED4': '0',
     'MOTOR1': '0',
-    'MOTOR2': '0'
+    'MOTOR2': '0'a
 }
 def iot_stream_handler(message):
     global iot_status
     path = message['path'][1:]
     iot_status[path] = message['data']
+    print(iot_status)
     print(message)
 
 firebase = pyrebase.initialize_app(config)
@@ -115,17 +111,25 @@ def detect(index, changed_index) -> None:
     cap.release()
 
 def delivery() -> None:
-    def webhookData(message: str):
-        return {
-            "username": "Fire Alert",
-            "content": message,
-            "text": message
-        }
+    # 시리얼 포트 설정
+    ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=9600)
+
+    WEBHOOK_URL = os.getenv('WEBHOOK_URL') or ''
+    WEBHOOK_REFRESH_DELAY = float(os.getenv('WEBHOOK_REFRESH_DELAY') or 5.0)
+
+    ALERT_REFRESH_DELAY = float(os.getenv('ALERT_REFRESH_DELAY') or 5.0)
 
     last_sent_timestamp = time.time()
     last_alert_timestamp = time.time()
 
     folder = 'res'
+
+    def webhookData(message: str):
+        return json.dumps({
+            "username": "Fire Alert",
+            "content": message,
+            "text": message
+        })
 
     if not os.path.exists(folder):
         os.makedirs(folder)
@@ -174,26 +178,19 @@ def delivery() -> None:
             ser.write('EcoMode:0\n'.encode())
         ser.flush()
 
-        ser.write(f"CtrlIoT:0{iot_status['LED1']}\n".encode())
+        ser.write(f"CtrlIoT:0{'1' if iot_status['LED1'] == 'true' else '0'}\n".encode())
         ser.flush()
-        ser.write(f"CtrlIoT:1{iot_status['LED2']}\n".encode())
+        ser.write(f"CtrlIoT:1{'1' if iot_status['LED2'] == 'true' else '0'}\n".encode())
         ser.flush()
-        ser.write(f"CtrlIoT:2{iot_status['LED3']}\n".encode())
+        ser.write(f"CtrlIoT:2{'1' if iot_status['LED3'] == 'true' else '0'}\n".encode())
         ser.flush()
-        ser.write(f"CtrlIoT:3{iot_status['LED4']}\n".encode())
+        ser.write(f"CtrlIoT:3{'1' if iot_status['LED4'] == 'true' else '0'}\n".encode())
         ser.flush()
 
         ser.write(f"CtrlIoT:X{iot_status['MOTOR1']}\n".encode())
         ser.flush()
         ser.write(f"CtrlIoT:Y{iot_status['MOTOR2']}\n".encode())
         ser.flush()
-
-        ret = ser.read_all()
-        print("=== DATA ===")
-        try:
-            print(ret.decode())
-        except:
-            print()
     
         time.sleep(LCD_REFRESH_DELAY)
 
@@ -205,7 +202,6 @@ t2 = threading.Thread(target=detect, args=(1, 1))
 t3 = threading.Thread(target=detect, args=(0, 3))
 
 delivery_thread = threading.Thread(target=delivery)
-#webhook_thread = threading.Thread(target=sendWebhook)
 
 t0.daemon = True
 t1.daemon = True
@@ -213,7 +209,6 @@ t2.daemon = True
 t3.daemon = True
 
 delivery_thread.daemon = True
-#webhook_thread.daemon = True
 
 t0.start()
 t1.start()
@@ -221,7 +216,6 @@ t2.start()
 t3.start()
 
 delivery_thread.start()
-#webhook_thread.start()
 
 cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
 
