@@ -195,18 +195,8 @@ void loop() {
     } else if (strcmp(serInput.key, "EcoMode") == 0) { // "EcoMode:1"
       ecoMode = serInput.value[0] == '1';
     } else if (strcmp(serInput.key, "CtrlIoT") == 0) { // "CtrlIoT:M1"
-      switch (serInput.value[0]) {
-        case '0':
-        case '1':
-        case '2':
-        case '3':
-          ledOn[serInput.value[0] - '0'] = serInput.value[1] == '1';
-          break;
-        case 'X':
-          motorOn[0] = serInput.value[1] == '1';
-          break;
-        case 'Y':
-          motorOn[1] = serInput.value[1] == '1';
+      for(int i=0;i<4;i++) {
+        ledOn[i] = serInput.value[i] == '1'; 
       }
     }
   }

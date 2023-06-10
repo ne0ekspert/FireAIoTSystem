@@ -37,7 +37,7 @@ iot_status: dict[str, str] = {
     'LED3': '0',
     'LED4': '0',
     'MOTOR1': '0',
-    'MOTOR2': '0'a
+    'MOTOR2': '0'
 }
 def iot_stream_handler(message):
     global iot_status
@@ -178,18 +178,9 @@ def delivery() -> None:
             ser.write('EcoMode:0\n'.encode())
         ser.flush()
 
-        ser.write(f"CtrlIoT:0{'1' if iot_status['LED1'] == 'true' else '0'}\n".encode())
-        ser.flush()
-        ser.write(f"CtrlIoT:1{'1' if iot_status['LED2'] == 'true' else '0'}\n".encode())
-        ser.flush()
-        ser.write(f"CtrlIoT:2{'1' if iot_status['LED3'] == 'true' else '0'}\n".encode())
-        ser.flush()
-        ser.write(f"CtrlIoT:3{'1' if iot_status['LED4'] == 'true' else '0'}\n".encode())
-        ser.flush()
-
-        ser.write(f"CtrlIoT:X{iot_status['MOTOR1']}\n".encode())
-        ser.flush()
-        ser.write(f"CtrlIoT:Y{iot_status['MOTOR2']}\n".encode())
+        ser.write(f"CtrlIoT:".encode())
+        for i in range(4):
+            ser.write(('1' if iot_status[f'LED{i}'] == 'true' else '0').encode())
         ser.flush()
     
         time.sleep(LCD_REFRESH_DELAY)
