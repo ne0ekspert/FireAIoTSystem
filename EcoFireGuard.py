@@ -18,8 +18,6 @@ load_dotenv(verbose=True)
 
 LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY') or 5.0)
 
-
-
 model = YOLO('best.pt')
 
 ## Firebase
@@ -32,17 +30,18 @@ config = {
 }
 
 iot_status: dict[str, str] = {
-    'LED1': '0',
-    'LED2': '0',
-    'LED3': '0',
-    'LED4': '0',
-    'MOTOR1': '0',
-    'MOTOR2': '0'
+    'LED1': 'false',
+    'LED2': 'false',
+    'LED3': 'false',
+    'LED4': 'false'
 }
 def iot_stream_handler(message):
     global iot_status
     path = message['path'][1:]
-    iot_status[path] = message['data']
+    if len(path) == 0:
+        pass
+    else:
+        iot_status[path] = message['data']
     print(iot_status)
     print(message)
 
@@ -170,18 +169,16 @@ def delivery() -> None:
                 last_alert_timestamp = time.time()
         else:
             ser.write('FireAt:0\n'.encode())
-        ser.flush()
 
         if sum(detected_people) == 0:
             ser.write('EcoMode:1\n'.encode())
         else:
             ser.write('EcoMode:0\n'.encode())
-        ser.flush()
 
         ser.write(f"CtrlIoT:".encode())
         for i in range(4):
             ser.write(('1' if iot_status[f'LED{i}'] == 'true' else '0').encode())
-        ser.flush()
+        ser.write('\n'.encode())
     
         time.sleep(LCD_REFRESH_DELAY)
 
