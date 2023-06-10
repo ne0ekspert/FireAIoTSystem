@@ -5,9 +5,6 @@
 #define SPRINKLER3 4
 #define SPRINKLER4 5
 
-#define MOTOR1 6
-#define MOTOR2 7
-
 #define LED1 9
 #define LED2 10
 #define LED3 11
@@ -20,7 +17,6 @@ LiquidCrystal_I2C lcd4(0x24, 16, 2);
 
 bool sprinklerOn[] = { false, false, false, false };
 bool ledOn[] = { false, false, false, false };
-bool motorOn[] = { false, false };
 
 struct serialInput {
   char key[10];
@@ -45,9 +41,6 @@ void setup() {
   pinMode(LED2, OUTPUT);
   pinMode(LED3, OUTPUT);
   pinMode(LED4, OUTPUT);
-
-  pinMode(MOTOR1, OUTPUT);
-  pinMode(MOTOR2, OUTPUT);
 
   // 화면 초기화
   lcd1.init();
@@ -108,13 +101,6 @@ void loop() {
 
   if (ledOn[4] && !ecoMode) digitalWrite(LED4, HIGH);
   else digitalWrite(LED4, LOW);
-
-  //////// DC MOTOR ////////
-  if (motorOn[0] && !ecoMode) digitalWrite(MOTOR1, HIGH);
-  else digitalWrite(MOTOR1, LOW);
-
-  if (motorOn[1] && !ecoMode) digitalWrite(MOTOR2, HIGH);
-  else digitalWrite(MOTOR2, LOW);
 
   while (Serial.available()) {
     Serial.readStringUntil(':').toCharArray(serInput.key, 10);
@@ -194,10 +180,9 @@ void loop() {
       }
     } else if (strcmp(serInput.key, "EcoMode") == 0) { // "EcoMode:1"
       ecoMode = serInput.value[0] == '1';
-    } else if (strcmp(serInput.key, "CtrlIoT") == 0) { // "CtrlIoT:M1"
-      for(int i=0;i<4;i++) {
+    } else if (strcmp(serInput.key, "CtrlIoT") == 0) { // "CtrlIoT:1011"
+      for(int i=0;i<4;i++)
         ledOn[i] = serInput.value[i] == '1'; 
-      }
     }
   }
 }
