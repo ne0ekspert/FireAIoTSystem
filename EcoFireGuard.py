@@ -155,7 +155,7 @@ def delivery() -> None:
 
         ser.write(f"CtrlIoT:".encode())
         for i in range(4):
-            ser.write(('1' if iot_status[f'LED{i}'] == 'true' else '0').encode())
+            ser.write(('1' if iot_status[f'LED{i+1}'] == 'true' else '0').encode())
         ser.write('\n'.encode())
 
         if len(fire_floor) > 0:
