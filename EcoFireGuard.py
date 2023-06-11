@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 ## Initial Settings
 load_dotenv(verbose=True)
 
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY') or 5.0)
 
 model = YOLO('best.pt')
@@ -109,6 +110,23 @@ def detect(index, changed_index) -> None:
     
     cap.release()
 
+async def fetch(url, message):
+    def webhookData(message: str):
+        return json.dumps({
+            "username": "Fire Alert",
+            "content": message,
+            "text": message
+        })
+    
+    res = requests.post(WEBHOOK_URL, webhookData(message), headers={
+                    'Content-Type': 'application/json'
+                })
+    
+    if res.ok:
+        print("Webhook sent")
+    else:
+        print(res.status_code)
+
 def delivery() -> None:
     # 시리얼 포트 설정
     ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=9600)
@@ -123,13 +141,6 @@ def delivery() -> None:
 
     folder = 'res'
 
-    def webhookData(message: str):
-        return json.dumps({
-            "username": "Fire Alert",
-            "content": message,
-            "text": message
-        })
-
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -138,19 +149,22 @@ def delivery() -> None:
         for i in range(len(fire)):
             if fire[i]:
                 fire_floor.append(str(i+1))
-        
+
+        if sum(detected_people) == 0:
+            ser.write('EcoMode:1\n'.encode())
+        else:
+            ser.write('EcoMode:0\n'.encode())
+
+        ser.write(f"CtrlIoT:".encode())
+        for i in range(4):
+            ser.write(('1' if iot_status[f'LED{i}'] == 'true' else '0').encode())
+        ser.write('\n'.encode())
+
         if len(fire_floor) > 0:
             ser.write(f"FireAt:{','.join(fire_floor)}\n".encode())
 
-            data = webhookData(f"Fire detected on floor {', '.join(fire_floor)}")
+            message = f"Fire detected on floor {', '.join(fire_floor)}"
             if last_sent_timestamp + WEBHOOK_REFRESH_DELAY <= time.time():
-                res = requests.post(WEBHOOK_URL, data, headers={
-                    'Content-Type': 'application/json'
-                })
-                if res.ok:
-                    print("Webhook sent")
-                else:
-                    print(res.status_code)
                 last_sent_timestamp = time.time()
 
             if last_alert_timestamp + ALERT_REFRESH_DELAY <= time.time():
@@ -169,16 +183,6 @@ def delivery() -> None:
                 last_alert_timestamp = time.time()
         else:
             ser.write('FireAt:0\n'.encode())
-
-        if sum(detected_people) == 0:
-            ser.write('EcoMode:1\n'.encode())
-        else:
-            ser.write('EcoMode:0\n'.encode())
-
-        ser.write(f"CtrlIoT:".encode())
-        for i in range(4):
-            ser.write(('1' if iot_status[f'LED{i}'] == 'true' else '0').encode())
-        ser.write('\n'.encode())
     
         time.sleep(LCD_REFRESH_DELAY)
 
