@@ -16,9 +16,6 @@ from dotenv import load_dotenv
 ## Initial Settings
 load_dotenv(verbose=True)
 
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')
-LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY') or 5.0)
-
 model = YOLO('best.pt')
 
 ## Firebase
@@ -118,7 +115,7 @@ async def fetch(url, message):
             "text": message
         })
     
-    res = requests.post(WEBHOOK_URL, webhookData(message), headers={
+    res = requests.post(url, webhookData(message), headers={
                     'Content-Type': 'application/json'
                 })
     
@@ -134,6 +131,7 @@ def delivery() -> None:
     WEBHOOK_URL = os.getenv('WEBHOOK_URL') or ''
     WEBHOOK_REFRESH_DELAY = float(os.getenv('WEBHOOK_REFRESH_DELAY') or 5.0)
 
+    LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY') or 5.0)
     ALERT_REFRESH_DELAY = float(os.getenv('ALERT_REFRESH_DELAY') or 5.0)
 
     last_sent_timestamp = time.time()
@@ -165,6 +163,7 @@ def delivery() -> None:
 
             message = f"Fire detected on floor {', '.join(fire_floor)}"
             if last_sent_timestamp + WEBHOOK_REFRESH_DELAY <= time.time():
+                webhook_req = fetch(WEBHOOK_URL, message)
                 last_sent_timestamp = time.time()
 
             if last_alert_timestamp + ALERT_REFRESH_DELAY <= time.time():
