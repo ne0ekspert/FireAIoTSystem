@@ -27,26 +27,6 @@ config = {
     "storageBucket": os.getenv('FIREBASE_STORAGEBUCKET') or ''
 }
 
-iot_status: dict[str, str] = {
-    'LED1': 'false',
-    'LED2': 'false',
-    'LED3': 'false',
-    'LED4': 'false'
-}
-def iot_stream_handler(message):
-    global iot_status
-    path = message['path'][1:]
-    if len(path) == 0:
-        pass
-    else:
-        iot_status[path] = message['data']
-    print(iot_status)
-    print(message)
-
-firebase = pyrebase.initialize_app(config)
-db = firebase.database()
-iot_stream = db.child('light').stream(iot_stream_handler)
-
 ## Loop
 done = False
 
@@ -139,6 +119,31 @@ def delivery() -> None:
 
     folder = 'res'
 
+    iot_status: dict[str, str] = {
+        'LED1': 'false',
+        'LED2': 'false',
+        'LED3': 'false',
+        'LED4': 'false'
+    }
+    def iot_stream_handler(message):
+        path = message['path'][1:]
+        if len(path) == 0:
+            pass
+        else:
+            iot_status[path] = message['data']
+
+        ser.write(f"CtrlIoT:".encode())
+        for i in range(4):
+            ser.write(('1' if iot_status[f'LED{i+1}'] == 'true' else '0').encode())
+        ser.write('\n'.encode())
+        
+        print(iot_status)
+        print(message)
+
+    firebase = pyrebase.initialize_app(config)
+    db = firebase.database()
+    iot_stream = db.child('light').stream(iot_stream_handler)
+
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -187,11 +192,6 @@ def delivery() -> None:
             ser.write('EcoMode:1\n'.encode())
         else:
             ser.write('EcoMode:0\n'.encode())
-
-        ser.write(f"CtrlIoT:".encode())
-        for i in range(4):
-            ser.write(('1' if iot_status[f'LED{i+1}'] == 'true' else '0').encode())
-        ser.write('\n'.encode())
     
         time.sleep(LCD_REFRESH_DELAY)
 
