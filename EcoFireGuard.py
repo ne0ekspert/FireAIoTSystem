@@ -177,7 +177,7 @@ def delivery() -> None:
 
         ser.write(f"CtrlIoT:".encode())
         for i in range(4):
-            ser.write(('1' if iot_status[f'LED{i}'] == 'true' else '0').encode())
+            ser.write(('1' if iot_status[f'LED{i+1}'] == 'true' else '0').encode())
         ser.write('\n'.encode())
     
         time.sleep(LCD_REFRESH_DELAY)
@@ -219,3 +219,4 @@ while not done:
         done = True
 
 cv2.destroyAllWindows()
+sys.exit(0)
