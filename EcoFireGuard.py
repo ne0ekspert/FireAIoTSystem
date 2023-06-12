@@ -44,6 +44,7 @@ def detect(index, changed_index) -> None:
         success, frame = cap.read()
 
         if success:
+            detect_start_time = time.time()
             try:
                 results = model.predict(frame, half=True, device='cpu', verbose=False)
             except:
@@ -84,6 +85,8 @@ def detect(index, changed_index) -> None:
             detected_people[changed_index] = detected_objects['person']
             fire[changed_index] = True if detected_objects['fire'] > 0 else False
             result_frames[-changed_index-1] = result_frame
+
+            print(f"{index}: Detection Time: {time.time()detect_start_time}")
     
     cap.release()
 
@@ -96,8 +99,8 @@ async def fetch(url, message):
         })
     
     res = requests.post(url, webhookData(message), headers={
-                    'Content-Type': 'application/json'
-                })
+        'Content-Type': 'application/json'
+    })
     
     if res.ok:
         print("Webhook sent")
@@ -155,12 +158,15 @@ def delivery() -> None:
 
         if sum(detected_people) == 0:
             ser.write('EcoMode:1\n'.encode())
+            print(f"[{time.time()}] EcoMode:1")
         else:
             ser.write('EcoMode:0\n'.encode())
+            print(f"[{time.time()}] EcoMode:0")
 
         ser.write(f"CtrlIoT:".encode())
         for i in range(4):
             ser.write(('1' if iot_status[f'LED{i+1}'] == 'true' else '0').encode())
+            print(f"[{time.time()}] CtrlIoT")
         ser.write('\n'.encode())
 
         if len(fire_floor) > 0:
@@ -185,13 +191,10 @@ def delivery() -> None:
                 
                 playsound(filepath, block=False)
                 last_alert_timestamp = time.time()
+            print(f"[{time.time()}] FireAt:{','.join(fire_floor)}")
         else:
             ser.write('FireAt:0\n'.encode())
-
-        if sum(detected_people) == 0:
-            ser.write('EcoMode:1\n'.encode())
-        else:
-            ser.write('EcoMode:0\n'.encode())
+            print(f"[{time.time()}] FireAt:0")
     
         time.sleep(LCD_REFRESH_DELAY)
 
