@@ -86,7 +86,7 @@ def detect(index, changed_index) -> None:
             fire[changed_index] = True if detected_objects['fire'] > 0 else False
             result_frames[-changed_index-1] = result_frame
 
-            print(f"{index}: Detection Time: {time.time()detect_start_time}")
+            print(f"{index}: Detection Time: {time.time()-detect_start_time}")
     
     cap.release()
 
@@ -136,8 +136,10 @@ def delivery() -> None:
             iot_status[path] = message['data']
 
         ser.write(f"CtrlIoT:".encode())
+        print(f"[{time.time()}] CtrlIoT")
         for i in range(4):
             ser.write(('1' if iot_status[f'LED{i+1}'] == 'true' else '0').encode())
+            print(f"[{time.time()}] {'1' if iot_status[f'LED{i+1}'] == 'true' else '0'}")
         ser.write('\n'.encode())
         
         print(iot_status)
@@ -162,12 +164,6 @@ def delivery() -> None:
         else:
             ser.write('EcoMode:0\n'.encode())
             print(f"[{time.time()}] EcoMode:0")
-
-        ser.write(f"CtrlIoT:".encode())
-        for i in range(4):
-            ser.write(('1' if iot_status[f'LED{i+1}'] == 'true' else '0').encode())
-            print(f"[{time.time()}] CtrlIoT")
-        ser.write('\n'.encode())
 
         if len(fire_floor) > 0:
             ser.write(f"FireAt:{','.join(fire_floor)}\n".encode())
