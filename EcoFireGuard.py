@@ -226,7 +226,7 @@ while not done:
         if all(detect_ready):
             visual_frame = background_image
             result_frame = cv2.vconcat([cv2.hconcat(result_frames[:2]), cv2.hconcat(result_frames[2:])])
-            visual_frame[225:705, 331:971] = result_frame
+            visual_frame[470:1469, 690:2023] = result_frame
             cv2.imshow("Object Detection", visual_frame)
 
         if cv2.waitKey(1) == ord("q"):
