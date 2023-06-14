@@ -18,6 +18,8 @@ load_dotenv(verbose=True)
 
 model = YOLO('best.pt')
 
+background_image = cv2.imread('bg.jpg')
+
 ## Firebase
 ## IoT 제어용으로 사용
 config = {
@@ -222,7 +224,9 @@ cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
 while not done:
     try:
         if all(detect_ready):
-            visual_frame = cv2.vconcat([cv2.hconcat(result_frames[:2]), cv2.hconcat(result_frames[2:])])
+            visual_frame = background_image
+            result_frame = cv2.vconcat([cv2.hconcat(result_frames[:2]), cv2.hconcat(result_frames[2:])])
+            visual_frame[225:705, 331:971] = result_frame
             cv2.imshow("Object Detection", visual_frame)
 
         if cv2.waitKey(1) == ord("q"):
