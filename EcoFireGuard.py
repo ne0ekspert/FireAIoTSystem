@@ -196,10 +196,10 @@ def delivery() -> None:
 
     ser.close()
 
-t0 = threading.Thread(target=detect, args=(3, 0))
-t1 = threading.Thread(target=detect, args=(2, 2))
+t0 = threading.Thread(target=detect, args=(3, 3))
+t1 = threading.Thread(target=detect, args=(2, 0))
 t2 = threading.Thread(target=detect, args=(1, 1))
-t3 = threading.Thread(target=detect, args=(0, 3))
+t3 = threading.Thread(target=detect, args=(0, 2))
 
 delivery_thread = threading.Thread(target=delivery)
 
