@@ -77,16 +77,16 @@ void setup() {
 
 void loop() {
   //////// SPRINKLER ////////
-  if (sprinklerOn[0]) digitalWrite(SPRINKLER1, HIGH);
+  if (sprinklerOn[0] && millis() % 500 >= 250) digitalWrite(SPRINKLER1, HIGH);
   else digitalWrite(SPRINKLER1, LOW);
 
-  if (sprinklerOn[1]) digitalWrite(SPRINKLER2, HIGH);
+  if (sprinklerOn[1] && millis() % 500 >= 250) digitalWrite(SPRINKLER2, HIGH);
   else digitalWrite(SPRINKLER2, LOW);
 
-  if (sprinklerOn[2]) digitalWrite(SPRINKLER3, HIGH);
+  if (sprinklerOn[2] && millis() % 500 >= 250) digitalWrite(SPRINKLER3, HIGH);
   else digitalWrite(SPRINKLER3, LOW);
 
-  if (sprinklerOn[3]) digitalWrite(SPRINKLER4, HIGH);
+  if (sprinklerOn[3] && millis() % 500 >= 250) digitalWrite(SPRINKLER4, HIGH);
   else digitalWrite(SPRINKLER4, LOW);
 
   //////// LED ////////
@@ -99,8 +99,29 @@ void loop() {
   if (ledOn[2] && !ecoMode) digitalWrite(LED3, HIGH);
   else digitalWrite(LED3, LOW);
 
-  if (ledOn[4] && !ecoMode) digitalWrite(LED4, HIGH);
+  if (ledOn[3] && !ecoMode) digitalWrite(LED4, HIGH);
   else digitalWrite(LED4, LOW);
+
+  /*
+  if (!(millis() % 1000)) {
+    Serial.print("SC1:");
+    Serial.println(sprinklerOn[0] && millis() / 500 >= 250);
+    Serial.print("SC2:");
+    Serial.println(sprinklerOn[1] && millis() / 500 >= 250);
+    Serial.print("SC3:");
+    Serial.println(sprinklerOn[2] && millis() / 500 >= 250);
+    Serial.print("SC4:");
+    Serial.println(sprinklerOn[3] && millis() / 500 >= 250);
+
+    Serial.print("LED1:");
+    Serial.println(ledOn[0] && !ecoMode);
+    Serial.print("LED2:");
+    Serial.println(ledOn[1] && !ecoMode);
+    Serial.print("LED3:");
+    Serial.println(ledOn[2] && !ecoMode);
+    Serial.print("LED4:");
+    Serial.println(ledOn[3] && !ecoMode);
+  } */
 
   while (Serial.available()) {
     Serial.readStringUntil(':').toCharArray(serInput.key, 10);
@@ -126,17 +147,15 @@ void loop() {
 
       if (strcmp(serInput.value, "0") != 0) { // 0은 불이 감지 안 됐을 때
         Serial.println("Detected Fire");
-        byte fireFloors[4] = {0,0,0,0};
-        for(int i=0;i<strlen(serInput.value);i++) {
-          if (serInput.value[i] >= '0' && serInput.value[i] <= '9') fireFloors[i] = serInput.value[i] - '0';
-          Serial.println(fireFloors[i]);
+        bool fireFloors[4] = { false, false, false, false };
+        for(char value : serInput.value) {
+          if (value == NULL) break;
+          if (value >= '0' && value <= '9') {
+            fireFloors[value - '1'] = true;
+            sprinklerOn[value - '1'] = true;
+            Serial.println(value);
+          }
         }
-        bool fireAboveBelow[4][2] = {
-          {false, false},
-          {false, false},
-          {false, false},
-          {false, false}
-        };
 
         sprintf(str, "Fire on %sF", serInput.value);
         lcd1.print(str);
@@ -151,38 +170,22 @@ void loop() {
         lcd3.setCursor(0, 1);
         lcd4.setCursor(0, 1);
 
-        for (int i=0;i<4;i++) {
-          for (int floor : fireFloors) {
-            if (floor == 0) break;
-            if (floor > i+1) fireAboveBelow[i][0] = true; // Above
-            if (floor < i+1) fireAboveBelow[i][1] = true; // Below
-            Serial.println(floor);
-          }
-        }
+        if (fireFloors[0] || fireFloors[1] || fireFloors[2] || fireFloors[3]) lcd1.print("Evac Downstairs");
 
-        for (int floor : fireFloors) sprinklerOn[floor-1] = true;
+        if (fireFloors[0] && (fireFloors[2] || fireFloors[3])) lcd2.print("Wait for instr");
+        else if (fireFloors[1] || fireFloors[2] || fireFloors[3]) lcd2.print("Evac Downstairs");
+        else if (fireFloors[0]) lcd2.print("Evac Upstairs");
 
-        if (fireAboveBelow[0][0] && fireAboveBelow[0][1]) lcd1.print("Wait for instr");
-        else if (fireAboveBelow[0][0]) lcd1.print("Evac Downstairs");
-        else if (fireAboveBelow[0][1]) lcd1.print("Evac Upstairs");
+        if ((fireFloors[0] || fireFloors[1]) && fireFloors[3]) lcd3.print("Wait for instr");
+        else if (fireFloors[3]) lcd3.print("Evac Downstairs");
+        else if (fireFloors [0] || fireFloors[1] || fireFloors[2]) lcd3.print("Evac Upstairs");
 
-        if (fireAboveBelow[1][0] && fireAboveBelow[1][1]) lcd2.print("Wait for instr");
-        else if (fireAboveBelow[1][0]) lcd2.print("Evac Downstairs");
-        else if (fireAboveBelow[1][1]) lcd2.print("Evac Upstairs");
-
-        if (fireAboveBelow[2][0] && fireAboveBelow[2][1]) lcd3.print("Wait for instr");
-        else if (fireAboveBelow[2][0]) lcd3.print("Evac Downstairs");
-        else if (fireAboveBelow[2][1]) lcd3.print("Evac Upstairs");
-
-        if (fireAboveBelow[3][0] && fireAboveBelow[3][1]) lcd4.print("Wait for instr");
-        else if (fireAboveBelow[3][0]) lcd4.print("Evac Downstairs");
-        else if (fireAboveBelow[3][1]) lcd4.print("Evac Upstairs");
+        if (fireFloors[0] || fireFloors[1] || fireFloors[2] || fireFloors[3]) lcd4.print("Evac Upstairs");
       }
     } else if (strcmp(serInput.key, "EcoMode") == 0) { // "EcoMode:1"
       ecoMode = serInput.value[0] == '1';
     } else if (strcmp(serInput.key, "CtrlIoT") == 0) { // "CtrlIoT:1011"
-      for(int i=0;i<4;i++)
-        ledOn[i] = serInput.value[i] == '1'; 
+      for(int i=0;i<4;i++) ledOn[i] = serInput.value[i] == '1'; 
     }
   }
 } `                                                                                     
