@@ -5,7 +5,7 @@ import cv2
 from ultralytics import YOLO
 from gtts import gTTS
 from playsound import playsound
-import time
+import time, datetime
 import serial
 import pyrebase
 import threading
@@ -115,6 +115,7 @@ def fetch(url, message):
 def delivery() -> None:
     # 시리얼 포트 설정
     ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=9600, timeout=0)
+    datetime_object = datetime.datetime.fromtimestamp(time.time())
 
     WEBHOOK_URL = os.getenv('WEBHOOK_URL') or ''
     WEBHOOK_REFRESH_DELAY = float(os.getenv('WEBHOOK_REFRESH_DELAY') or 5.0)
@@ -128,7 +129,7 @@ def delivery() -> None:
     last_alert_timestamp = time.time() - ALERT_REFRESH_DELAY
     last_weather_timestamp = time.time() - WEATHER_REFRESH_DELAY
 
-    ser.write(f"Time:{int(time.time())}\n".encode())
+    ser.write(f"Time:{int((datetime_object - datetime.datetime(1970, 1, 1)).total_seconds())}\n".encode())
 
     folder = 'res'
 
