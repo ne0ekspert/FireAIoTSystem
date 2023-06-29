@@ -118,6 +118,7 @@ def delivery() -> None:
 
     WEBHOOK_URL = os.getenv('WEBHOOK_URL') or ''
     WEBHOOK_REFRESH_DELAY = float(os.getenv('WEBHOOK_REFRESH_DELAY') or 5.0)
+    OPENWEATHERMAP_API_KEY = os.getenv('OPENWEATHERMAP_API_KEY')
 
     LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY') or 5.0)
     ALERT_REFRESH_DELAY = float(os.getenv('ALERT_REFRESH_DELAY') or 5.0)
@@ -198,8 +199,9 @@ def delivery() -> None:
                 last_alert_timestamp = time.time()
 
             if last_weather_timestamp + WEATHER_REFRESH_DELAY <= time.time():
-                res = requests.get("https://api.openweathermap.org/data/2.5/weather?lat=37.510940376940525&lon=127.05974624788985&appid={OPENWEATHERMAP_API_KEY}&units=metric")
+                res = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=37.510940376940525&lon=127.05974624788985&appid={OPENWEATHERMAP_API_KEY}&units=metric")
                 weather = res.json()
+                print(weather)
                 ser.write(f"Weather:{weather['weather'][0]['main']}\n".encode())
                 ser.write(f"Temp:{weather['main']['temp']}\n".encode())
                 last_weather_timestamp = time.time()
