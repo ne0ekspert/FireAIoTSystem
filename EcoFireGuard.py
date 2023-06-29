@@ -71,6 +71,9 @@ def detect(index, changed_index) -> None:
                     detect_class_id = int(box.cls.tolist()[0])
                     detect_class_label: str = 'person' if detect_class_id == 1 else 'fire'
 
+                    if position[0] > 400:
+                        continue
+
                     if detect_class_id == 0: # On fire detected
                         detected_objects['fire'] += 1
 
@@ -88,11 +91,11 @@ def detect(index, changed_index) -> None:
             fire[changed_index] = True if detected_objects['fire'] > 0 else False
             result_frames[-changed_index-1] = result_frame
 
-            print(f"{index}: Detection Time: {time.time()-detect_start_time}")
+            #`MNprint(f"{index}: Detection Time: {time.time()-detect_start_time}")
     
     cap.release()
 
-async def fetch(url, message):
+def fetch(url, message):
     def webhookData(message: str):
         return json.dumps({
             "username": "Fire Alert",
@@ -111,7 +114,7 @@ async def fetch(url, message):
 
 def delivery() -> None:
     # 시리얼 포트 설정
-    ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=9600)
+    ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=9600, timeout=0)
 
     WEBHOOK_URL = os.getenv('WEBHOOK_URL') or ''
     WEBHOOK_REFRESH_DELAY = float(os.getenv('WEBHOOK_REFRESH_DELAY') or 5.0)
@@ -131,6 +134,7 @@ def delivery() -> None:
         'LED4': 'false'
     }
     def iot_stream_handler(message):
+        ser.flush()
         path = message['path'][1:]
         if len(path) == 0:
             pass
@@ -139,9 +143,8 @@ def delivery() -> None:
 
         ser.write(f"CtrlIoT:".encode())
         print(f"[{time.time()}] CtrlIoT")
-        for i in range(4):
-            ser.write(('1' if iot_status[f'LED{i+1}'] == 'true' else '0').encode())
-            print(f"[{time.time()}] {'1' if iot_status[f'LED{i+1}'] == 'true' else '0'}")
+        ser.write(''.join('1' if iot_status[f'LED{i+1}'] == 'true' else '0' for i in range(4)).encode())
+        print(f"[{time.time()}] {'1' if iot_status[f'LED{i+1}'] == 'true' else '0'}")
         ser.write('\n'.encode())
         
         print(iot_status)
@@ -172,7 +175,7 @@ def delivery() -> None:
 
             message = f"Fire detected on floor {', '.join(fire_floor)}"
             if last_sent_timestamp + WEBHOOK_REFRESH_DELAY <= time.time():
-                webhook_req = fetch(WEBHOOK_URL, message)
+                fetch(WEBHOOK_URL, message)
                 last_sent_timestamp = time.time()
 
             if last_alert_timestamp + ALERT_REFRESH_DELAY <= time.time():
@@ -198,10 +201,10 @@ def delivery() -> None:
 
     ser.close()
 
-t0 = threading.Thread(target=detect, args=(3, 3))
-t1 = threading.Thread(target=detect, args=(2, 0))
-t2 = threading.Thread(target=detect, args=(1, 1))
-t3 = threading.Thread(target=detect, args=(0, 2))
+t0 = threading.Thread(target=detect, args=(3, 0)) # 2
+t1 = threading.Thread(target=detect, args=(2, 3)) # 1
+t2 = threading.Thread(target=detect, args=(1, 2)) # 
+t3 = threading.Thread(target=detect, args=(0, 1))
 
 delivery_thread = threading.Thread(target=delivery)
 
@@ -226,7 +229,7 @@ while not done:
         if all(detect_ready):
             visual_frame = background_image
             result_frame = cv2.vconcat([cv2.hconcat(result_frames[:2]), cv2.hconcat(result_frames[2:])])
-            visual_frame[470:1469, 690:2023] = result_frame
+            visual_frame[469:1469, 690:2023] = cv2.resize(result_frame, (1333, 1000))
             cv2.imshow("Object Detection", visual_frame)
 
         if cv2.waitKey(1) == ord("q"):
