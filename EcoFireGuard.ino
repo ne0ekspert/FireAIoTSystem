@@ -1,3 +1,4 @@
+#include <TimeLib.h>
 #include <LiquidCrystal_I2C.h>
 
 #define SPRINKLER1 2
@@ -15,6 +16,7 @@ LiquidCrystal_I2C lcd2(0x26, 16, 2);
 LiquidCrystal_I2C lcd3(0x25, 16, 2);
 LiquidCrystal_I2C lcd4(0x24, 16, 2);
 
+bool fireFloors[] = { false, false, false, false };
 bool sprinklerOn[] = { false, false, false, false };
 bool ledOn[] = { false, false, false, false };
 
@@ -26,8 +28,10 @@ struct serialInput {
 struct serialInput serInput;
 
 bool ecoMode = false;
+char weather[16];
 char str[16]; // For LCD Output
 char buf[8]; // For String.toCharArray()
+int temperature = 0;
 
 void setup() { 
   Serial.begin(9600);
@@ -102,42 +106,61 @@ void loop() {
   if (ledOn[3] && !ecoMode) digitalWrite(LED4, HIGH);
   else digitalWrite(LED4, LOW);
 
-  /*
-  if (!(millis() % 1000)) {
-    Serial.print("SC1:");
-    Serial.println(sprinklerOn[0] && millis() / 500 >= 250);
-    Serial.print("SC2:");
-    Serial.println(sprinklerOn[1] && millis() / 500 >= 250);
-    Serial.print("SC3:");
-    Serial.println(sprinklerOn[2] && millis() / 500 >= 250);
-    Serial.print("SC4:");
-    Serial.println(sprinklerOn[3] && millis() / 500 >= 250);
+  if (!fireFloors[0] && !fireFloors[1] && !fireFloors[2] && !fireFloors[3] && millis() % 1000 < 50) {
+    lcd1.clear();
+    lcd2.clear();
 
-    Serial.print("LED1:");
-    Serial.println(ledOn[0] && !ecoMode);
-    Serial.print("LED2:");
-    Serial.println(ledOn[1] && !ecoMode);
-    Serial.print("LED3:");
-    Serial.println(ledOn[2] && !ecoMode);
-    Serial.print("LED4:");
-    Serial.println(ledOn[3] && !ecoMode);
-  } */
+    lcd1.setCursor(0, 0);
+    lcd1.print(year());
+    lcd1.print('-');
+    if (month() < 10) lcd1.print('0');
+    lcd1.print(month());
+    lcd1.print('-');
+    if (day() < 10) lcd1.print('0');
+    lcd1.print(day());
+    lcd1.setCursor(0, 1);
+    if (hour() < 10) lcd1.print('0');
+    lcd1.print(hour());
+    lcd1.print(':');
+    if (minute() < 10) lcd1.print('0');
+    lcd1.print(minute());
+    lcd1.print(':');
+    if (second() < 10) lcd1.print('0');
+    lcd1.print(second());
+
+    lcd2.setCursor(0, 0);
+    lcd2.print(weather);
+    lcd2.setCursor(0, 1);
+    lcd2.print(temperature);
+    lcd2.print((char)223);
+    lcd2.print('C');
+
+    //lcd2.setCursor(0, 1);
+    //lcd2.print((char)0b10110111); // ja_JP ki
+    //lcd2.print((char)0b10101100); // ja_JP little ya
+    //lcd2.print((char)0b11011001); // ja_JP ru
+  }
 
   while (Serial.available()) {
     Serial.readStringUntil(':').toCharArray(serInput.key, 10);
     Serial.readStringUntil('\n').toCharArray(serInput.value, 10);
     
-    Serial.print("key:");
-    Serial.println(serInput.key);
-    Serial.print("value:");
-    Serial.println(serInput.value);
+    //Serial.print("key:");
+    //Serial.println(serInput.key);
+    //Serial.print("value:");
+    //Serial.println(serInput.value);
 
     lcd1.setCursor(0, 0);
     lcd2.setCursor(0, 0);
     lcd3.setCursor(0, 0);
     lcd4.setCursor(0, 0);
-
-    if (strcmp(serInput.key, "FireAt") == 0) { // "FireAt:3"
+    if (strcmp(serInput.key, "Time") == 0) {
+      setTime(atoi(serInput.value));
+    } else if (strcmp(serInput.key, "Weather") == 0) {
+      strcpy(weather, serInput.value);
+    } else if (strcmp(serInput.key, "Temp") == 0) {
+      temperature = atoi(serInput.value);
+    } else if (strcmp(serInput.key, "FireAt") == 0) { // "FireAt:3"
       lcd1.clear();
       lcd2.clear();
       lcd3.clear();
@@ -146,14 +169,13 @@ void loop() {
       for (int i=0;i<4;i++) sprinklerOn[i] = false;
 
       if (strcmp(serInput.value, "0") != 0) { // 0은 불이 감지 안 됐을 때
-        Serial.println("Detected Fire");
-        bool fireFloors[4] = { false, false, false, false };
+        //Serial.println("Detected Fire");
         for(char value : serInput.value) {
           if (value == NULL) break;
           if (value >= '0' && value <= '9') {
             fireFloors[value - '1'] = true;
             sprinklerOn[value - '1'] = true;
-            Serial.println(value);
+            //Serial.println(value);
           }
         }
 
@@ -162,8 +184,8 @@ void loop() {
         lcd2.print(str);
         lcd3.print(str);
         lcd4.print(str);
-        Serial.print("LCD: ");
-        Serial.println(str);
+        //Serial.print("LCD: ");
+        //Serial.println(str);
 
         lcd1.setCursor(0, 1);
         lcd2.setCursor(0, 1);
@@ -188,4 +210,4 @@ void loop() {
       for(int i=0;i<4;i++) ledOn[i] = serInput.value[i] == '1'; 
     }
   }
-} `                                                                                     
+}

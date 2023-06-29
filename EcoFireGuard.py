@@ -121,9 +121,13 @@ def delivery() -> None:
 
     LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY') or 5.0)
     ALERT_REFRESH_DELAY = float(os.getenv('ALERT_REFRESH_DELAY') or 5.0)
+    WEATHER_REFRESH_DELAY = float(os.getenv('WEATHER_REFRESH_DELAY') or 600.0)
 
-    last_sent_timestamp = time.time()
-    last_alert_timestamp = time.time()
+    last_sent_timestamp = time.time() - LCD_REFRESH_DELAY
+    last_alert_timestamp = time.time() - ALERT_REFRESH_DELAY
+    last_weather_timestamp = time.time() - WEATHER_REFRESH_DELAY
+
+    ser.write(f"Time:{int(time.time())}\n".encode())
 
     folder = 'res'
 
@@ -192,6 +196,14 @@ def delivery() -> None:
                 
                 playsound(filepath, block=False)
                 last_alert_timestamp = time.time()
+
+            if last_weather_timestamp + WEATHER_REFRESH_DELAY <= time.time():
+                res = requests.get("https://api.openweathermap.org/data/2.5/weather?lat=37.510940376940525&lon=127.05974624788985&appid={OPENWEATHERMAP_API_KEY}&units=metric")
+                weather = res.json()
+                ser.write(f"Weather:{weather['weather'][0]['main']}\n".encode())
+                ser.write(f"Temp:{weather['main']['temp']}\n".encode())
+                last_weather_timestamp = time.time()
+
             print(f"[{time.time()}] FireAt:{','.join(fire_floor)}")
         else:
             ser.write('FireAt:0\n'.encode())
