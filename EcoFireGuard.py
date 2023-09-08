@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 ## Initial Settings
 load_dotenv(verbose=True)
 
-model = YOLO('best.pt')
+model = YOLO('best.onnx')
 
 background_image = cv2.imread('bg.jpg')
 
@@ -199,7 +199,7 @@ def delivery() -> None:
                 last_alert_timestamp = time.time()
 
             if last_weather_timestamp + WEATHER_REFRESH_DELAY <= time.time():
-                res = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=37.510940376940525&lon=127.05974624788985&appid={OPENWEATHERMAP_API_KEY}&units=metric")
+                res = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat={OPENWEATHERMAP_LAT}&lon={OPENWEATHERMAP_LONG}&appid={OPENWEATHERMAP_API_KEY}&units=metric")
                 weather = res.json()
                 ser.write(f"Weather:{weather['weather'][0]['main']}\n".encode())
                 ser.write(f"Temp:{weather['main']['temp']}\n".encode())
@@ -214,9 +214,9 @@ def delivery() -> None:
 
     ser.close()
 
-t0 = threading.Thread(target=detect, args=(3, 0)) # 2
-t1 = threading.Thread(target=detect, args=(2, 3)) # 1
-t2 = threading.Thread(target=detect, args=(1, 2)) # 
+t0 = threading.Thread(target=detect, args=(3, 0))
+t1 = threading.Thread(target=detect, args=(2, 3))
+t2 = threading.Thread(target=detect, args=(1, 2))
 t3 = threading.Thread(target=detect, args=(0, 1))
 
 delivery_thread = threading.Thread(target=delivery)
