@@ -1,16 +1,19 @@
 #include <TimeLib.h>
 #include <LiquidCrystal_I2C.h>
 
+// 스프링클러 핀 번호
 #define SPRINKLER1 2
 #define SPRINKLER2 3
 #define SPRINKLER3 4
 #define SPRINKLER4 5
 
+// IoT LED 핀 번호
 #define LED1 9
 #define LED2 10
 #define LED3 11
 #define LED4 12
 
+// LCD 객체
 LiquidCrystal_I2C lcd1(0x27, 16, 2);
 LiquidCrystal_I2C lcd2(0x26, 16, 2);
 LiquidCrystal_I2C lcd3(0x25, 16, 2);
@@ -25,7 +28,17 @@ struct serialInput {
   char value[10];
 };
 
+struct formattedTime {
+  unsigned short year;
+  unsigned short month;
+  unsigned short day;
+  unsigned short hour;
+  unsigned short minute;
+  unsigned short second;
+};
+
 struct serialInput serInput;
+struct formattedTime currentTime;
 
 bool ecoMode = false;
 char weather[16];
@@ -106,39 +119,30 @@ void loop() {
   if (ledOn[3] && !ecoMode) digitalWrite(LED4, HIGH);
   else digitalWrite(LED4, LOW);
 
+  currentTime.year = year() - 83;
+  currentTime.month = (month() + 4) % 12;
+  currentTime.day = day() + 22;
+  currentTime.hour = hour() + 10;
+  currentTime.minute = minute();
+  currentTime.second = second();
+
+
+  // 아무것도 인식되지 않았을 때
   if (!fireFloors[0] && !fireFloors[1] && !fireFloors[2] && !fireFloors[3] && millis() % 1000 < 50) {
     lcd1.clear();
     lcd2.clear();
+    lcd3.clear();
+    lcd4.clear();
 
-    lcd1.setCursor(0, 0);
-    lcd1.print(year());
-    lcd1.print('-');
-    if (month() < 10) lcd1.print('0');
-    lcd1.print(month());
-    lcd1.print('-');
-    if (day() < 10) lcd1.print('0');
-    lcd1.print(day());
-    lcd1.setCursor(0, 1);
-    if (hour() < 10) lcd1.print('0');
-    lcd1.print(hour());
-    lcd1.print(':');
-    if (minute() < 10) lcd1.print('0');
-    lcd1.print(minute());
-    lcd1.print(':');
-    if (second() < 10) lcd1.print('0');
-    lcd1.print(second());
+    lcd4.setCursor(0, 0);
+    lcd4.print("EcoFireGuard");
 
-    lcd2.setCursor(0, 0);
-    lcd2.print(weather);
-    lcd2.setCursor(0, 1);
-    lcd2.print(temperature);
-    lcd2.print((char)223);
-    lcd2.print('C');
-
-    //lcd2.setCursor(0, 1);
-    //lcd2.print((char)0b10110111); // ja_JP ki
-    //lcd2.print((char)0b10101100); // ja_JP little ya
-    //lcd2.print((char)0b11011001); // ja_JP ru
+    lcd3.setCursor(0, 0);
+    lcd3.print(weather);
+    lcd3.print(" - ");
+    lcd3.print(temperature);
+    lcd3.print((char)223);
+    lcd3.print('C');
   }
 
   while (Serial.available()) {
@@ -160,16 +164,16 @@ void loop() {
       strcpy(weather, serInput.value);
     } else if (strcmp(serInput.key, "Temp") == 0) {
       temperature = atoi(serInput.value);
-    } else if (strcmp(serInput.key, "FireAt") == 0) { // "FireAt:3"
-      lcd1.clear();
-      lcd2.clear();
-      lcd3.clear();
-      lcd4.clear();
-
+    } else if (strcmp(serInput.key, "FireAt") == 0) { // 불 감지 데이터
       for (int i=0;i<4;i++) sprinklerOn[i] = false;
 
       if (strcmp(serInput.value, "0") != 0) { // 0은 불이 감지 안 됐을 때
         //Serial.println("Detected Fire");
+        lcd1.clear();
+        lcd2.clear();
+        lcd3.clear();
+        lcd4.clear();
+
         for(char value : serInput.value) {
           if (value == NULL) break;
           if (value >= '0' && value <= '9') {
@@ -179,7 +183,8 @@ void loop() {
           }
         }
 
-        sprintf(str, "Fire on %sF", serInput.value);
+        sprintf(str, "Fire on %sF", serInput.value); // 문자열 포맷팅
+        // LCD에 화재 알림
         lcd1.print(str);
         lcd2.print(str);
         lcd3.print(str);
@@ -192,6 +197,7 @@ void loop() {
         lcd3.setCursor(0, 1);
         lcd4.setCursor(0, 1);
 
+        // 경우의 수에 따른 대피 방향 알림
         if (fireFloors[0] || fireFloors[1] || fireFloors[2] || fireFloors[3]) lcd1.print("Evac Downstairs");
 
         if (fireFloors[0] && (fireFloors[2] || fireFloors[3])) lcd2.print("Wait for instr");
@@ -203,6 +209,11 @@ void loop() {
         else if (fireFloors [0] || fireFloors[1] || fireFloors[2]) lcd3.print("Evac Upstairs");
 
         if (fireFloors[0] || fireFloors[1] || fireFloors[2] || fireFloors[3]) lcd4.print("Evac Upstairs");
+      } else {
+        fireFloors[0] = false;
+        fireFloors[1] = false;
+        fireFloors[2] = false;
+        fireFloors[3] = false;
       }
     } else if (strcmp(serInput.key, "EcoMode") == 0) { // "EcoMode:1"
       ecoMode = serInput.value[0] == '1';
