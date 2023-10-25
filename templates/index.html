@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Viewer</title>
+    <link rel="stylesheet" href="{{ url_for('static', 'style.css') }}">
+</head>
+<body>
+    <h3>Live Stream</h3>
+    <div id="app">
+        <div>
+            <img src="{{ url_for('video', camera_id=cam_id) }}" width="100%">
+        </div>
+        <div>
+            <ul id="camera_list">
+                <li>1층 카메라</li>
+                <li>2층 카메라</li>
+                <li>3층 카메라</li>
+                <li>4층 카메라</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

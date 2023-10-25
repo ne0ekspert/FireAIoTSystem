@@ -1,3 +1,5 @@
 /.vscode
 /.env
 /res
+/build
+__pycache__
