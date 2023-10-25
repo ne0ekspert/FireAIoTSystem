@@ -1,13 +1,16 @@
-import os, time
+import os, sys, time
 import json
 import serial
 import datetime
-#import crypto
-#sys.modules['Crypto'] = crypto
+import crypto
+sys.modules['Crypto'] = crypto # Pyrebase에서 Crypto모듈을 찾을 수 없어 crypto 모듈을 Crypto 이름으로 추가
 import pyrebase
 from gtts import gTTS
 from playsound import playsound
 import requests
+from dotenv import load_dotenv
+
+load_dotenv(verbose=True)
 
 # IoT 활용을 위한 Firebase 설정
 # 보안을 위해 설정값은 .env파일에 저장
@@ -24,6 +27,7 @@ def fetch(url, message):
 
     Args:
         url (str): 웹훅을 보낼 URL
+        
         message (str): 웹훅에 보낼 메세지
 
     Returns:
@@ -51,9 +55,13 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
 
     Args:
         cam0 (FireDetector): 화재감지 객체 0
+
         cam1 (FireDetector): 화재감지 객체 1
+
         cam2 (FireDetector): 화재감지 객체 2
+
         cam3 (FireDetector): 화재감지 객체 3
+
     """
     ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=9600, timeout=0)
     datetime_object = datetime.datetime.fromtimestamp(time.time())
@@ -95,7 +103,7 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
         ser.write(f"CtrlIoT:".encode())
         print(f"[{time.time()}] CtrlIoT")
         ser.write(''.join('1' if iot_status[f'LED{i+1}'] == 'true' else '0' for i in range(4)).encode())
-        print(f"[{time.time()}] {'1' if iot_status[f'LED{i+1}'] == 'true' else '0'}")
+        print(f"[{time.time()}] {'1' if iot_status[f'LED{i+1}'] == 'true' else '0' for i in range(4)}")
         ser.write('\n'.encode())
         
         print(iot_status)
