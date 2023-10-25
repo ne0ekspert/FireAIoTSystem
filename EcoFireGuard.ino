@@ -28,17 +28,7 @@ struct serialInput {
   char value[10];
 };
 
-struct formattedTime {
-  unsigned short year;
-  unsigned short month;
-  unsigned short day;
-  unsigned short hour;
-  unsigned short minute;
-  unsigned short second;
-};
-
 struct serialInput serInput;
-struct formattedTime currentTime;
 
 bool ecoMode = false;
 char weather[16];
@@ -119,14 +109,6 @@ void loop() {
   if (ledOn[3] && !ecoMode) digitalWrite(LED4, HIGH);
   else digitalWrite(LED4, LOW);
 
-  currentTime.year = year() - 83;
-  currentTime.month = (month() + 4) % 12;
-  currentTime.day = day() + 22;
-  currentTime.hour = hour() + 10;
-  currentTime.minute = minute();
-  currentTime.second = second();
-
-
   // 아무것도 인식되지 않았을 때
   if (!fireFloors[0] && !fireFloors[1] && !fireFloors[2] && !fireFloors[3] && millis() % 1000 < 50) {
     lcd1.clear();
@@ -158,9 +140,7 @@ void loop() {
     lcd2.setCursor(0, 0);
     lcd3.setCursor(0, 0);
     lcd4.setCursor(0, 0);
-    if (strcmp(serInput.key, "Time") == 0) {
-      setTime(atoi(serInput.value));
-    } else if (strcmp(serInput.key, "Weather") == 0) {
+    if (strcmp(serInput.key, "Weather") == 0) {
       strcpy(weather, serInput.value);
     } else if (strcmp(serInput.key, "Temp") == 0) {
       temperature = atoi(serInput.value);
