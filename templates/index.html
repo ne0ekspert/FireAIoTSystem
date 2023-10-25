@@ -4,20 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Camera Viewer</title>
-    <link rel="stylesheet" href="{{ url_for('static', 'style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h3>Live Stream</h3>
+    <h1>Live Stream</h1>
     <div id="app">
-        <div>
-            <img src="{{ url_for('video', camera_id=cam_id) }}" width="100%">
+        <div class="viewer">
+            <img src="{{ url_for('video', camera_id=cam_id) }}">
         </div>
-        <div>
+        <div class="list">
             <ul id="camera_list">
-                <li>1층 카메라</li>
-                <li>2층 카메라</li>
-                <li>3층 카메라</li>
-                <li>4층 카메라</li>
+                <a href="?camid={{ floor1cam.changed_index }}"><li>1층 카메라</li></a>
+                <a href="?camid={{ floor2cam.changed_index }}"><li>2층 카메라</li></a>
+                <a href="?camid={{ floor3cam.changed_index }}"><li>3층 카메라</li></a>
+                <a href="?camid={{ floor4cam.changed_index }}"><li>4층 카메라</li></a>
             </ul>
         </div>
     </div>
