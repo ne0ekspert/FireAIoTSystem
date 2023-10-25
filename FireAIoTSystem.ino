@@ -135,7 +135,7 @@ void loop() {
     lcd4.clear();
 
     lcd4.setCursor(0, 0);
-    lcd4.print("EcoFireGuard");
+    lcd4.print("Fire AIoT Sys");
 
     lcd3.setCursor(0, 0);
     lcd3.print(weather);
