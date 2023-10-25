@@ -129,8 +129,6 @@ def delivery() -> None:
     last_alert_timestamp = time.time() - ALERT_REFRESH_DELAY
     last_weather_timestamp = time.time() - WEATHER_REFRESH_DELAY
 
-    ser.write(f"Time:{int((datetime_object - datetime.datetime(1970, 1, 1)).total_seconds())}\n".encode())
-
     folder = 'res'
 
     iot_status: dict[str, str] = {
@@ -148,13 +146,15 @@ def delivery() -> None:
             iot_status[path] = message['data']
 
         ser.write(f"CtrlIoT:".encode())
-        print(f"[{time.time()}] CtrlIoT")
+        #print(f"[{time.time()}] CtrlIoT")
         ser.write(''.join('1' if iot_status[f'LED{i+1}'] == 'true' else '0' for i in range(4)).encode())
-        print(f"[{time.time()}] {'1' if iot_status[f'LED{i+1}'] == 'true' else '0'}")
+        #print(f"[{time.time()}] {'1' if iot_status[f'LED{i+1}'] == 'true' else '0'}")
         ser.write('\n'.encode())
         
-        print(iot_status)
-        print(message)
+        #print(iot_status)
+        #print(message)
+
+    time.sleep(3)
 
     firebase = pyrebase.initialize_app(config)
     db = firebase.database()
@@ -171,10 +171,19 @@ def delivery() -> None:
 
         if sum(detected_people) == 0:
             ser.write('EcoMode:1\n'.encode())
-            print(f"[{time.time()}] EcoMode:1")
+            #print(f"[{time.time()}] EcoMode:1")
         else:
             ser.write('EcoMode:0\n'.encode())
-            print(f"[{time.time()}] EcoMode:0")
+            #print(f"[{time.time()}] EcoMode:0")
+
+        if last_weather_timestamp + WEATHER_REFRESH_DELAY <= time.time():
+            res = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=37.510940376940525&lon=127.05974624788985&appid={OPENWEATHERMAP_API_KEY}&units=metric")
+            weather = res.json()
+            print(weather)
+            ser.write(f"Weather:{weather['weather'][0]['description'].title()}\n".encode())
+            ser.write(f"Temp:{weather['main']['temp']}\n".encode())
+            ser.write(f"Time:{int((datetime_object - datetime.datetime(1970, 1, 1)).total_seconds())}\n".encode())
+            last_weather_timestamp = time.time()
 
         if len(fire_floor) > 0:
             ser.write(f"FireAt:{','.join(fire_floor)}\n".encode())
@@ -199,27 +208,19 @@ def delivery() -> None:
                 playsound(filepath, block=False)
                 last_alert_timestamp = time.time()
 
-            if last_weather_timestamp + WEATHER_REFRESH_DELAY <= time.time():
-                res = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat=37.510940376940525&lon=127.05974624788985&appid={OPENWEATHERMAP_API_KEY}&units=metric")
-                weather = res.json()
-                print(weather)
-                ser.write(f"Weather:{weather['weather'][0]['main']}\n".encode())
-                ser.write(f"Temp:{weather['main']['temp']}\n".encode())
-                last_weather_timestamp = time.time()
-
-            print(f"[{time.time()}] FireAt:{','.join(fire_floor)}")
+            #print(f"[{time.time()}] FireAt:{','.join(fire_floor)}")
         else:
             ser.write('FireAt:0\n'.encode())
-            print(f"[{time.time()}] FireAt:0")
+            #print(f"[{time.time()}] FireAt:0")
     
         time.sleep(LCD_REFRESH_DELAY)
 
     ser.close()
 
-t0 = threading.Thread(target=detect, args=(3, 0)) # 2
-t1 = threading.Thread(target=detect, args=(2, 3)) # 1
-t2 = threading.Thread(target=detect, args=(1, 2)) # 
-t3 = threading.Thread(target=detect, args=(0, 1))
+t0 = threading.Thread(target=detect, args=(3, 1)) # 3
+t1 = threading.Thread(target=detect, args=(2, 0)) # 2
+t2 = threading.Thread(target=detect, args=(1, 2)) # 1
+t3 = threading.Thread(target=detect, args=(0, 3)) # 0
 
 delivery_thread = threading.Thread(target=delivery)
 
