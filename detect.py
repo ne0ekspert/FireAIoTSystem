@@ -3,7 +3,7 @@ import time
 from ultralytics import YOLO
 
 # 화재 인식 모델 불러오기
-model = YOLO('best.onnx')
+model = YOLO('best.pt', task='detect')
 
 class FireDetector:
     """
@@ -11,19 +11,28 @@ class FireDetector:
 
     Args:
         index (int): 실제 카메라의 ID
+
         changed_index (int): 카메라와 층 수가 맞지 않을 경우 변경할 번호
     
     Attributes:
         index (int): 카메라의 ID
+
         changed_index (int): 바꿀 ID
 
         done (bool): 동작 완료 플래그
+
         detect_ready (bool): 인식 준비 완료 플래그
+
         cap (VideoCapture): 카메라 객체
+
     """
     def __init__(self, index, changed_index):
         self.index = index
         self.changed_index = changed_index
+
+        self.fire = False
+        self.detected_people = 0
+        self.result_frame = None
 
         self.done = False
         self.detect_ready = False
@@ -33,15 +42,18 @@ class FireDetector:
         """
         화재 인식 스레드 함수
         """
+        print(f"{self.index}: 감지 스레드 시작")
         while not self.done:
             success, frame = self.cap.read()
 
             if success:
+                self.original_frame = frame
                 detect_start_time = time.time()
                 try:
                     # 화재 감지 모델로 화재 감지
                     results = model.predict(frame, half=True, device='cpu', verbose=False)
-                except:
+                except Exception as e:
+                    print(f"ERROR: {e}")
                     continue
                 result_frame = frame
 
@@ -80,10 +92,11 @@ class FireDetector:
 
                 self.detect_ready = True
                 self.detected_people = detected_objects['person']
-                self.fire = True if detected_objects['fire'] > 0 else False
+                self.fire = detected_objects['fire'] > 0
                 self.result_frame = result_frame
 
     def release_camera(self):
+        print(f"Releasing Camera ID: {self.index}")
         self.done = True
         self.cap.release()
 
@@ -96,8 +109,12 @@ class FireDetector:
         return self.detected_people
     
     @property
-    def fireDetectedFloor(self) -> int:
-        return self.changed_index if self.fire else 0
+    def fireDetectedFloor(self) -> str:
+        return str(self.changed_index) if self.fire else '0'
+
+    @property
+    def originalFrame(self):
+        return self.original_frame
 
     @property
     def resultFrame(self):
