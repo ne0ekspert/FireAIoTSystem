@@ -40,6 +40,7 @@ def fetch(url, message):
             "text": message
         })
     
+    # 웹훅 요청
     res = requests.post(url, webhookData(message), headers={
         'Content-Type': 'application/json'
     })
@@ -81,6 +82,7 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
     last_alert_timestamp = time.time() - ALERT_REFRESH_DELAY
     last_weather_timestamp = time.time() - WEATHER_REFRESH_DELAY
 
+    # TTS 데이터를 저장할 폴도
     folder = 'res'
 
     iot_status: dict[str, str] = {
@@ -109,6 +111,7 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
         print(iot_status)
         print(message)
 
+    # Firebase 모듈 초기화
     firebase = pyrebase.initialize_app(config)
     db = firebase.database()
     iot_stream = db.child('light').stream(iot_stream_handler)
@@ -117,8 +120,9 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
         os.makedirs(folder)
 
     while True:
+        # 불이 인식된 층 (0이 아닌 곳)을 필터하여 리스트로 변환
         fire_floor = list(
-            filter(lambda x: x > 0,
+            filter(lambda x: int(x) > 0,
                 map(lambda x: x.fireDetectedFloor, [cam0, cam1, cam2, cam3])
             )
         )
@@ -132,6 +136,7 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
             print(f"[{time.time()}] EcoMode:0")
 
         if len(fire_floor) > 0:
+            # 화재 감지 데이터 전송
             ser.write(f"FireAt:{','.join(fire_floor)}\n".encode())
 
             # 웹훅 전송
@@ -156,6 +161,7 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
                 playsound(filepath, block=False)
                 last_alert_timestamp = time.time()
 
+            # 날씨 데이터 전송
             if last_weather_timestamp + WEATHER_REFRESH_DELAY <= time.time():
                 res = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat={OPENWEATHERMAP_LAT}&lon={OPENWEATHERMAP_LONG}&appid={OPENWEATHERMAP_API_KEY}&units=metric")
                 weather = res.json()

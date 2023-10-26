@@ -110,7 +110,7 @@ class FireDetector:
     
     @property
     def fireDetectedFloor(self) -> str:
-        return str(self.changed_index) if self.fire else '0'
+        return str(self.changed_index + 1) if self.fire else '0'
 
     @property
     def originalFrame(self):
