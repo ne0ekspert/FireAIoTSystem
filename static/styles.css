@@ -20,22 +20,31 @@ img {
 }
 
 .list {
+    display: flex;
     flex-grow: 1;
+    flex-direction: column;
     width: 0;
     border: 1px solid black;
 }
 
-#camera_list {
+.list ul {
+    flex-grow: 1;
+    height: 0;
     padding: 0;
 }
 
-#camera_list a:first-child li {
+.list a:first-child li {
     border-top: none;
 }
 
-#camera_list li {
+.list li {
     border-top: 1px solid gray;
     padding: .5em;
+}
+
+.light_control {
+    flex-grow: 1;
+    height: 0;
 }
 
 a {

@@ -135,7 +135,7 @@ class FireDetector:
         """
         불이 감지되었을 경우 층 수를 반환
         """
-        return str(self.changed_index) if self.fire else '0'
+        return str(self.changed_index + 1) if self.fire else '0'
 
     @property
     def originalFrame(self):

@@ -14,11 +14,11 @@ background_image = cv2.imread('bg.jpg', cv2.IMREAD_COLOR)
 done = False
 app = Flask(__name__)
 
-# 카메라 / 화재 인식 객체
-camera0 = FireDetector(3, 0)
-camera1 = FireDetector(2, 3)
+# 카메라 연결 / 화재 인식 객체
+camera0 = FireDetector(0, 0)
+camera1 = FireDetector(2, 1)
 camera2 = FireDetector(1, 2)
-camera3 = FireDetector(0, 1)
+camera3 = FireDetector(3, 3)
 
 @app.route('/')
 def index():
@@ -54,6 +54,9 @@ class WebServer:
         self.camList = [cam0, cam1, cam2, cam3]
 
     def gen_frames(self, id):
+        """
+        영상을 웹으로 스트리밍 하기 위한 함수
+        """
         while True:
             frame = self.camList[id].resultFrame # frame에 카메라 화면 받아오기
             ret, buffer = cv2.imencode('.jpg', frame) # buffer에 JPG 형식으로 저장
@@ -100,8 +103,10 @@ cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
 # 창 내부 표시
 while not done:
     try:
+        # 모든 카메라가 준비가 되었을 때
         if all([camera0.isReady, camera1.isReady, camera2.isReady, camera3.isReady]):
             visual_frame = background_image
+            # 모든 카메라를 한 화면에 합치기
             result_frame = cv2.vconcat([cv2.hconcat([camera0.resultFrame, camera1.resultFrame]),
                                         cv2.hconcat([camera2.resultFrame, camera3.resultFrame])])
             visual_frame[469:1469, 690:2023] = cv2.resize(result_frame, (1333, 1000))

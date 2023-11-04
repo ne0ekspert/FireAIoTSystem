@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,11 +13,17 @@
             <img src="{{ url_for('video', camera_id=cam_id) }}">
         </div>
         <div class="list">
-            <ul id="camera_list">
+            <ul class="camera_list">
                 <a href="?camid={{ floor1cam.changed_index }}"><li>1층 카메라</li></a>
                 <a href="?camid={{ floor2cam.changed_index }}"><li>2층 카메라</li></a>
                 <a href="?camid={{ floor3cam.changed_index }}"><li>3층 카메라</li></a>
                 <a href="?camid={{ floor4cam.changed_index }}"><li>4층 카메라</li></a>
+            </ul>
+            <ul class="light_control">
+                <a href="?camid={{cam_id}}&light=1"><li>1층 LED 토글</li></a>
+                <a href="?camid={{cam_id}}&light=2"><li>2층 LED 토글</li></a>
+                <a href="?camid={{cam_id}}&light=3"><li>3층 LED 토글</li></a>
+                <a href="?camid={{cam_id}}&light=4"><li>4층 LED 토글</li></a>
             </ul>
         </div>
     </div>
