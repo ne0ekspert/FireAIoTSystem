@@ -2,7 +2,7 @@ import sys
 import cv2
 import threading
 from detect import FireDetector
-from delivery import delivery
+from delivery import delivery, updateLED
 
 from flask import Flask, render_template
 from flask import request
@@ -24,6 +24,15 @@ camera3 = FireDetector(3, 3)
 def index():
     # 카메라 번호
     cam_id = request.args.get("camid")
+    led0 = request.args.get("led0")
+    led1 = request.args.get("led1")
+    led2 = request.args.get("led2")
+    led3 = request.args.get("led3")
+    
+    if led0 != None: updateLED(0, 'true' if led0 == '1' else 'false')
+    if led1 != None: updateLED(1, 'true' if led1 == '1' else 'false')
+    if led2 != None: updateLED(2, 'true' if led2 == '1' else 'false')
+    if led3 != None: updateLED(3, 'true' if led3 == '1' else 'false')
     
     # cam_id값이 설정되지 않았을 떄 기본 카메라 ID인 0으로 설정
     if cam_id == None:
