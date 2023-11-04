@@ -10,7 +10,7 @@ from flask import Response
 
 background_image = cv2.imread('bg.jpg', cv2.IMREAD_COLOR)
 
-## Loop
+# 반복 완료 변수
 done = False
 app = Flask(__name__)
 
@@ -22,19 +22,23 @@ camera3 = FireDetector(0, 1)
 
 @app.route('/')
 def index():
+    # 카메라 번호
     cam_id = request.args.get("camid")
+    
+    # cam_id값이 설정되지 않았을 떄 기본 카메라 ID인 0으로 설정
     if cam_id == None:
         cam_id = 0
 
     return render_template('index.html', cam_id=cam_id, floor1cam=camera0, floor2cam=camera1, floor3cam=camera2, floor4cam=camera3)
 
+# 영상 스트림 URL
 @app.route('/video/<int:camera_id>')
 def video(camera_id):
     return Response(webviewer.gen_frames(camera_id), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 class WebServer:
     """
-    여러 카메라의 영상 스트리밍을 위한 클래스
+    여러 카메라의 영상 실시간 송출을 위한 클래스
 
     Args:
         cam0 (FireDetector): 화재 감지 객체 0
@@ -51,24 +55,25 @@ class WebServer:
 
     def gen_frames(self, id):
         while True:
-            frame = self.camList[id].resultFrame
-            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = self.camList[id].resultFrame # frame에 카메라 화면 받아오기
+            ret, buffer = cv2.imencode('.jpg', frame) # buffer에 JPG 형식으로 저장
             frame = buffer.tobytes()
             yield (b'--frame\r\n'
-                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
+                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # 화면 데이터를 전송
 
     def run(self):
         app.run(host='0.0.0.0', port=80, debug=False)
 
+# 웹 카메라 뷰어 객체
 webviewer = WebServer(camera0, camera1, camera2, camera3)
 
-# 화재 인식 스레드
+# 화재 인식 코드를 병렬로 실행
 t0 = threading.Thread(target=camera0.detect)
 t1 = threading.Thread(target=camera1.detect)
 t2 = threading.Thread(target=camera2.detect)
 t3 = threading.Thread(target=camera3.detect)
 
-# 데이터 전송, 카메라 웹뷰어 스레드
+# 데이터 전송, 카메라 웹뷰어 병렬처리
 delivery_thread = threading.Thread(target=delivery, args=(camera0, camera1, camera2, camera3))
 viewer_thread = threading.Thread(target=webviewer.run)
 
@@ -80,7 +85,7 @@ t3.daemon = True
 delivery_thread.daemon = True
 viewer_thread.daemon = True
 
-# 스레드 시작
+# 병렬 처리 시작
 t0.start()
 t1.start()
 t2.start()
@@ -89,9 +94,10 @@ t3.start()
 delivery_thread.start()
 viewer_thread.start()
 
-# 창 생성
+# 크기 변경 가능한 창 생성
 cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
 
+# 창 내부 표시
 while not done:
     try:
         if all([camera0.isReady, camera1.isReady, camera2.isReady, camera3.isReady]):
@@ -106,10 +112,12 @@ while not done:
     except KeyboardInterrupt:
         done = True
 
+# 카메라 사용 해제
 camera0.release_camera()
 camera1.release_camera()
 camera2.release_camera()
 camera3.release_camera()
 
+# 프로그램 종료
 cv2.destroyAllWindows()
 sys.exit(0)

@@ -20,13 +20,17 @@ config = {
     "databaseURL": os.getenv('FIREBASE_DBURL') or '',
     "storageBucket": os.getenv('FIREBASE_STORAGEBUCKET') or ''
 }
- 
+
+# Firebase 실시간 데이터베이스를 사용하기 위한 객체
+firebase = pyrebase.initialize_app(config)
+db = firebase.database()
+
 def fetch(url, message):
     """
     디스코드에 웹훅을 보내는 함수
 
     Args:
-        url (str): 웹훅을 보낼 URL
+        url (str): 웹훅을 보낼 URL 
         
         message (str): 웹훅에 보낼 메세지
 
@@ -34,6 +38,9 @@ def fetch(url, message):
         None
     """
     def webhookData(message: str):
+        """
+        웹훅 데이터를 슬랙, 디스코드에 호환되도록 설정
+        """
         return json.dumps({
             "username": "Fire Alert",
             "content": message,
@@ -63,6 +70,7 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
         cam3 (FireDetector): 화재감지 객체 3
 
     """
+    # 시리얼 통신 연결
     ser = serial.Serial(port=os.getenv('SERIAL_PORT'), baudrate=9600, timeout=0)
     datetime_object = datetime.datetime.fromtimestamp(time.time())
 
@@ -76,7 +84,7 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
     ALERT_REFRESH_DELAY = float(os.getenv('ALERT_REFRESH_DELAY') or 5.0) # TTS로 경고를 하고 기다릴 시간 (초)
     WEATHER_REFRESH_DELAY = float(os.getenv('WEATHER_REFRESH_DELAY') or 600.0)
 
-    # 마지막으로 보낸 데이터
+    # 마지막으로 보낸 데이터를 보내고 지난 시간
     last_sent_timestamp = time.time() - LCD_REFRESH_DELAY
     last_alert_timestamp = time.time() - ALERT_REFRESH_DELAY
     last_weather_timestamp = time.time() - WEATHER_REFRESH_DELAY
@@ -100,23 +108,26 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
         else:
             iot_status[path] = message['data']
 
+        # CtrlIoT:0000 형식으로 데이터 전송
+        # 값이 1이면 LED ON, 값이 0이면 LED OFF
         ser.write(f"CtrlIoT:".encode())
         print(f"[{time.time()}] CtrlIoT")
+        # 값이 'true'이면 '1', 값이 'false'이면 '0'으로 변환 
         ser.write(''.join('1' if iot_status[f'LED{i+1}'] == 'true' else '0' for i in range(4)).encode())
-        print(f"[{time.time()}] {'1' if iot_status[f'LED{i+1}'] == 'true' else '0' for i in range(4)}")
+        print(f"[{time.time()}] {('1' if iot_status[f'LED{i+1}'] == 'true' else '0' for i in range(4))}")
         ser.write('\n'.encode())
         
         print(iot_status)
         print(message)
 
-    firebase = pyrebase.initialize_app(config)
-    db = firebase.database()
+    # LED 변경 사항을 실시간으로 받아오는 코드
     iot_stream = db.child('light').stream(iot_stream_handler)
 
     if not os.path.exists(folder):
         os.makedirs(folder)
 
     while True:
+        # 불이 인식된 층의 리스트를 정리
         fire_floor = list(
             filter(lambda x: x > 0,
                 map(lambda x: x.fireDetectedFloor, [cam0, cam1, cam2, cam3])
@@ -146,6 +157,7 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
                 filename = f"fireat_{''.join(fire_floor)}.mp3"
                 filepath = os.path.join(folder, filename)
 
+                # 파일이 없는 경우 gTTS로 새로운 목소리 파일을 받아오기
                 if not os.path.exists(filepath):
                     tts = gTTS(text=text, lang='ko')
                     tts.save(filepath)
@@ -153,9 +165,11 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
                 else:
                     print(f"WAV file '{filename}' already exists.")
                 
+                # 소리 파일 재생
                 playsound(filepath, block=False)
                 last_alert_timestamp = time.time()
 
+            # 날씨 데이터 전송
             if last_weather_timestamp + WEATHER_REFRESH_DELAY <= time.time():
                 res = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat={OPENWEATHERMAP_LAT}&lon={OPENWEATHERMAP_LONG}&appid={OPENWEATHERMAP_API_KEY}&units=metric")
                 weather = res.json()
@@ -172,3 +186,6 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
         time.sleep(LCD_REFRESH_DELAY)
 
     ser.close()
+
+def updateLED(id: int, value: str):
+    db.child("light").update({f"LED{id+1}": value})

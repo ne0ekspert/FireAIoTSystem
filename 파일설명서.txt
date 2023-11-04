@@ -1,0 +1,12 @@
+# Fire AIoT System
+
+컴퓨터 비전으로 화재를 감지하는 시스템
+
+## 파일 설명
+
+1. `main.py`: 메인 창, 웹 뷰어 실행파일
+2. `detect.py`: 화재, 사람을 감지하는 모듈
+3. `delivery.py`: 각종 데이터를 아두이노, 파이어베이스 등으로 전송하는 모듈
+4. `best.pt`: YOLOv8 화재 감지 인공지능 모델
+5. `templates/index.html`: 웹 뷰어 HTML 코드
+6. `static/styles.css`: 웹 뷰어 CSS 코드
