@@ -50,6 +50,9 @@ def fetch(url, message):
     else:
         print(res.status_code)
 
+def updateLight(id, value):
+    pass
+
 def delivery(cam0, cam1, cam2, cam3) -> None:
     """
     각 데이터를 전송하는 함수
