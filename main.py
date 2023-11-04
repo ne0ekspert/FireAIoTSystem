@@ -15,9 +15,9 @@ done = False
 app = Flask(__name__)
 
 # 카메라 연결 / 화재 인식 객체
-camera0 = FireDetector(0, 0)
-camera1 = FireDetector(2, 1)
-camera2 = FireDetector(1, 2)
+camera0 = FireDetector(2, 0) 
+camera1 = FireDetector(1, 1)
+camera2 = FireDetector(0, 2)
 camera3 = FireDetector(3, 3)
 
 @app.route('/')
@@ -73,7 +73,7 @@ webviewer = WebServer(camera0, camera1, camera2, camera3)
 # 화재 인식 코드를 병렬로 실행
 t0 = threading.Thread(target=camera0.detect)
 t1 = threading.Thread(target=camera1.detect)
-t2 = threading.Thread(target=camera2.detect)
+t2 = threading.Thread(target=camera2.detect)    
 t3 = threading.Thread(target=camera3.detect)
 
 # 데이터 전송, 카메라 웹뷰어 병렬처리

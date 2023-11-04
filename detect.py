@@ -107,6 +107,8 @@ class FireDetector:
                 self.detected_people = detected_objects['person']
                 self.fire = detected_objects['fire'] > 0 # 불이 감지된 경우 True, 아닌 경우 False
                 self.result_frame = result_frame
+            else:
+                self.cap = cv2.VideoCapture(self.index)
 
     def release_camera(self):
         """
