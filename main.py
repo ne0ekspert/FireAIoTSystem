@@ -15,10 +15,8 @@ done = False
 app = Flask(__name__)
 
 # 카메라 연결 / 화재 인식 객체
-camera0 = FireDetector(2, 0) 
+camera0 = FireDetector(0, 0) 
 camera1 = FireDetector(1, 1)
-camera2 = FireDetector(0, 2)
-camera3 = FireDetector(3, 3)
 
 @app.route('/')
 def index():
@@ -59,8 +57,8 @@ class WebServer:
         cam3 (FireDetector): 화재 감지 객체 3
     
     """
-    def __init__(self, cam0, cam1, cam2, cam3):
-        self.camList = [cam0, cam1, cam2, cam3]
+    def __init__(self, cam0, cam1):
+        self.camList = [cam0, cam1]
 
     def gen_frames(self, id):
         """
@@ -77,22 +75,18 @@ class WebServer:
         app.run(host='0.0.0.0', port=80, debug=False)
 
 # 웹 카메라 뷰어 객체
-webviewer = WebServer(camera0, camera1, camera2, camera3)
+webviewer = WebServer(camera0, camera1)
 
 # 화재 인식 코드를 병렬로 실행
 t0 = threading.Thread(target=camera0.detect)
 t1 = threading.Thread(target=camera1.detect)
-t2 = threading.Thread(target=camera2.detect)    
-t3 = threading.Thread(target=camera3.detect)
 
 # 데이터 전송, 카메라 웹뷰어 병렬처리
-delivery_thread = threading.Thread(target=delivery, args=(camera0, camera1, camera2, camera3))
+delivery_thread = threading.Thread(target=delivery, args=(camera0, camera1))
 viewer_thread = threading.Thread(target=webviewer.run)
 
 t0.daemon = True
 t1.daemon = True
-t2.daemon = True
-t3.daemon = True
 
 delivery_thread.daemon = True
 viewer_thread.daemon = True
@@ -100,8 +94,6 @@ viewer_thread.daemon = True
 # 병렬 처리 시작
 t0.start()
 t1.start()
-t2.start()
-t3.start()
 
 delivery_thread.start()
 viewer_thread.start()
@@ -113,11 +105,10 @@ cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
 while not done:
     try:
         # 모든 카메라가 준비가 되었을 때
-        if all([camera0.isReady, camera1.isReady, camera2.isReady, camera3.isReady]):
+        if all([camera0.isReady, camera1.isReady]):
             visual_frame = background_image
             # 모든 카메라를 한 화면에 합치기
-            result_frame = cv2.vconcat([cv2.hconcat([camera0.resultFrame, camera1.resultFrame]),
-                                        cv2.hconcat([camera2.resultFrame, camera3.resultFrame])])
+            result_frame = cv2.hconcat([camera0.resultFrame, camera1.resultFrame])
             visual_frame[469:1469, 690:2023] = cv2.resize(result_frame, (1333, 1000))
             cv2.imshow("Object Detection", visual_frame)
 
@@ -129,8 +120,6 @@ while not done:
 # 카메라 사용 해제
 camera0.release_camera()
 camera1.release_camera()
-camera2.release_camera()
-camera3.release_camera()
 
 # 프로그램 종료
 cv2.destroyAllWindows()
