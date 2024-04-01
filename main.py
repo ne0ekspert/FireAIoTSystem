@@ -15,10 +15,10 @@ done = False
 app = Flask(__name__)
 
 # 카메라 연결 / 화재 인식 객체
-camera0 = FireDetector(2, 0) 
-camera1 = FireDetector(1, 1)
+camera0 = FireDetector(1, 0) 
+camera1 = FireDetector(3, 1)
 camera2 = FireDetector(0, 2)
-camera3 = FireDetector(3, 3)
+camera3 = FireDetector(2, 3)
 
 @app.route('/')
 def index():
@@ -28,6 +28,11 @@ def index():
     led1 = request.args.get("led1")
     led2 = request.args.get("led2")
     led3 = request.args.get("led3")
+
+    print(f"{led0 = }")
+    print(f"{led1 = }")
+    print(f"{led2 = }")
+    print(f"{led3 = }")
     
     if led0 != None: updateLED(0, 'true' if led0 == '1' else 'false')
     if led1 != None: updateLED(1, 'true' if led1 == '1' else 'false')

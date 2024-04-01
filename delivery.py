@@ -48,17 +48,17 @@ def fetch(url, message):
         })
     
     # 웹훅 요청
-    res = requests.post(url, webhookData(message), headers={
-        'Content-Type': 'application/json'
-    })
-    
-    if res.ok:
-        print("Webhook sent")
-    else:
-        print(res.status_code)
-
-def updateLight(id, value):
-    pass
+    try:
+        res = requests.post(url, webhookData(message), headers={
+            'Content-Type': 'application/json'
+        })
+        
+        if res.ok:
+            print("Webhook sent")
+        else:
+            print(res.status_code)
+    except:
+        pass
 
 def delivery(cam0, cam1, cam2, cam3) -> None:
     """
@@ -81,17 +81,17 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
     WEBHOOK_URL = os.getenv('WEBHOOK_URL') or ''
     WEBHOOK_REFRESH_DELAY = float(os.getenv('WEBHOOK_REFRESH_DELAY') or 5.0) # 웹훅을 보내고 기다릴 시간 (초)
     OPENWEATHERMAP_API_KEY = os.getenv('OPENWEATHERMAP_API_KEY')
-    OPENWEATHERMAP_LAT = 0.0
-    OPENWEATHERMAP_LONG = 0.0
+    OPENWEATHERMAP_LAT = 37.4685318
+    OPENWEATHERMAP_LONG = 127.0390682
 
     LCD_REFRESH_DELAY = float(os.getenv('LCD_REFRESH_DELAY') or 5.0) # LCD에 정보를 전송하고 기다릴 시간 (초)
     ALERT_REFRESH_DELAY = float(os.getenv('ALERT_REFRESH_DELAY') or 5.0) # TTS로 경고를 하고 기다릴 시간 (초)
-    WEATHER_REFRESH_DELAY = float(os.getenv('WEATHER_REFRESH_DELAY') or 600.0)
+    WEATHER_REFRESH_DELAY = float(os.getenv('WEATHER_REFRESH_DELAY') or 60.0)
 
     # 마지막으로 보낸 데이터를 보내고 지난 시간
-    last_sent_timestamp = time.time() - LCD_REFRESH_DELAY
-    last_alert_timestamp = time.time() - ALERT_REFRESH_DELAY
-    last_weather_timestamp = time.time() - WEATHER_REFRESH_DELAY
+    last_sent_timestamp = 0
+    last_alert_timestamp = 0
+    last_weather_timestamp = 0
 
     # TTS 데이터를 저장할 폴도
     folder = 'res'
@@ -178,19 +178,23 @@ def delivery(cam0, cam1, cam2, cam3) -> None:
                 last_alert_timestamp = time.time()
 
             # 날씨 데이터 전송
-            if last_weather_timestamp + WEATHER_REFRESH_DELAY <= time.time():
-                res = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat={OPENWEATHERMAP_LAT}&lon={OPENWEATHERMAP_LONG}&appid={OPENWEATHERMAP_API_KEY}&units=metric")
-                weather = res.json()
-                print(weather)
-                ser.write(f"Weather:{weather['weather'][0]['main']}\n".encode())
-                ser.write(f"Temp:{weather['main']['temp']}\n".encode())
-                last_weather_timestamp = time.time()
 
             print(f"[{time.time()}] FireAt:{','.join(fire_floor)}")
         else: # 불이 감지되지 않으면 FireAt:0을 전송
             ser.write('FireAt:0\n'.encode())
             print(f"[{time.time()}] FireAt:0")
-    
+        """
+        if last_weather_timestamp + WEATHER_REFRESH_DELAY <= time.time():
+            res = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat={OPENWEATHERMAP_LAT}&lon={OPENWEATHERMAP_LONG}&appid={OPENWEATHERMAP_API_KEY}&units=metric")
+            weather = res.json()
+            print(weather)
+            ser.write(f"Weather:{weather['weather'][0]['main']}\n".encode())
+            ser.write(f"Temp:{weather['main']['temp']}\n".encode())
+            print(weather['weather'][0]['main'])
+            print(weather['main']['temp'])
+            last_weather_timestamp = time.time()
+            """
+            
         time.sleep(LCD_REFRESH_DELAY)
 
     ser.close()
